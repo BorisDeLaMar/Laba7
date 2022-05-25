@@ -1,0 +1,5 @@
+rootProject.name = 'Laba7LessGo'
+include 'client'
+include 'common'
+include 'server'
+
