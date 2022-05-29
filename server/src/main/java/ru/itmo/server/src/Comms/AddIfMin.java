@@ -9,6 +9,7 @@ import ru.itmo.common.connection.Response;
 import ru.itmo.server.src.Exceptions.LimitException;
 import ru.itmo.server.src.Exceptions.NullException;
 import ru.itmo.server.src.GivenClasses.*;
+import ru.itmo.server.src.containers.stringQueue;
 
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
@@ -94,10 +95,12 @@ public class AddIfMin implements Commands{
 			return e.getMessage();
 		}
 	}
-	public void add_if_min(DAO<Worker> dao, BufferedReader on) throws LimitException, IOException{
+	public String add_if_min_exec(DAO<Worker> dao, BufferedReader on) throws LimitException, IOException{
 		Worker w = new Worker();
 		Add dd = new Add();
-		dd.add_read(w, on);
+
+		String reply = "";
+		reply += dd.add_read_exec(w, on, reply);
 		LinkedHashSet<Worker> bd = new LinkedHashSet<Worker>(dao.getAll());
 		boolean f = true;
 		for(Worker e : bd) {
@@ -107,38 +110,14 @@ public class AddIfMin implements Commands{
 		}
 		if(f) {
 			w.setCreationDate();
-			w.setID(Worker.findPossibleID());
-			dao.appendToList(w);
-			System.out.println("Worker successfully added");
-		}
-		else {
-			System.out.println("Worker is not min, so he wasn't added");
-		}
-	}
-	public void add_if_min_exec(DAO<Worker> dao, BufferedReader on) throws LimitException, IOException{
-		Worker w = new Worker();
-		Add dd = new Add();
-		dd.add_read_exec(w, on);
-		LinkedHashSet<Worker> bd = new LinkedHashSet<Worker>(dao.getAll());
-		boolean f = true;
-		for(Worker e : bd) {
-			if(e.hashCode() < w.hashCode()) {
-				f = false;
-			}
-		}
-		if(f) {
-			w.setCreationDate();
-			String reply = GistStaff.getReply();
 			reply += "\nWorker from file was successfully added\n";
-			GistStaff.setReply(reply);
 			w.setID(Worker.findPossibleID());
 			dao.appendToList(w);
 		}
 		else{
-			String reply = GistStaff.getReply();
 			reply += "\nWorker from file wasn't min, so he wasn't added\n";
-			GistStaff.setReply(reply);
 		}
+		return reply;
 	}
 	@Override
 	public String getGist() {
@@ -149,44 +128,34 @@ public class AddIfMin implements Commands{
 		return "add_if_min";
 	}
 	@Override
-	public ArrayDeque<Commands> executeCommand(DAO<Worker> dao, ArrayDeque<Commands> q, BufferedReader on) throws IOException{
+	public stringQueue executeCommand(DAO<Worker> dao, ArrayDeque<Commands> q, BufferedReader on) throws IOException{
 		AddIfMin aim = new AddIfMin();
 		q = History.cut(q);
 		q.addLast(aim);
+
+		String reply = "";
 		try {
-			if(GistStaff.getFlag()) {
-				aim.add_if_min_exec(dao, on);
-			}
-			else {
-				aim.add_if_min(dao, on);
-			}
+			reply = aim.add_if_min_exec(dao, on);
 		}
 		catch(LimitException e) {
 			System.out.println(e.getMessage());
 		}
-		return q; //Проверить history. Если не робит, попробуй в try возвращать q, а здесь null
+		return new stringQueue(reply, q); //Проверить history. Если не робит, попробуй в try возвращать q, а здесь null
 	}
 	@Override
-	public ArrayDeque<Commands> requestExecute(DAO<Worker> dao, ArrayDeque<Commands> q, BufferedReader on, Request request, SocketChannel client) throws IOException {
+	public stringQueue requestExecute(DAO<Worker> dao, ArrayDeque<Commands> q, Request request) throws IOException {
 		q = History.cut(q);
 		q.addLast(this);
-		Response response;
+
+		String reply = "";
 		try{
 			TypeToken<ArrayList<String>> typeToken = new TypeToken<ArrayList<String>>(){};
-			String reply = this.just_add_if_min(dao, (ArrayList<String>) request.getArgumentAs(typeToken));
-			response = new Response(
-					Response.cmdStatus.OK,
-					reply
-			);
+			reply += this.just_add_if_min(dao, (ArrayList<String>) request.getArgumentAs(typeToken));
 		}
 		catch(JsonSyntaxException e){
-			response = new Response(
-					Response.cmdStatus.ERROR,
-					"Not valid arguments for function 'add'"
-			);
+			reply += "Not valid arguments for function 'add'";
 		}
-		client.write(ByteBuffer.wrap(response.toJson().getBytes(StandardCharsets.UTF_8)));
 
-		return q;
+		return new stringQueue(reply, q);
 	}
 }

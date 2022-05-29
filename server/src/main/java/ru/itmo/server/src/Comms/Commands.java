@@ -7,6 +7,7 @@ import java.io.IOException;
 import ru.itmo.common.connection.Request;
 //import java.util.Scanner;
 import ru.itmo.server.src.GivenClasses.Worker;
+import ru.itmo.server.src.containers.stringQueue;
 
 public interface Commands {
 	/** 
@@ -15,8 +16,8 @@ public interface Commands {
 	*/
 	String getName();
 	String getGist();
-	ArrayDeque<Commands> executeCommand(DAO<Worker> dao, ArrayDeque<Commands> q, BufferedReader on) throws IOException;
-	ArrayDeque<Commands> requestExecute(DAO<Worker> dao, ArrayDeque<Commands> q, BufferedReader on, Request request, SocketChannel client) throws IOException;
+	stringQueue executeCommand(DAO<Worker> dao, ArrayDeque<Commands> q, BufferedReader on) throws IOException;
+	stringQueue requestExecute(DAO<Worker> dao, ArrayDeque<Commands> q, Request request) throws IOException;
 	//ArrayDeque<Commands> executeCommand(DAO<Worker> dao, ArrayDeque<Commands> q, Scanner scn);
 	//ArrayDeque<Commands> executeCommand(DAO<Worker> dao, ArrayDeque<Commands> q);
 }

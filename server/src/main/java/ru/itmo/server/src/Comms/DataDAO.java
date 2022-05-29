@@ -1,22 +1,18 @@
 package ru.itmo.server.src.Comms;
-import java.io.BufferedReader;
 
+import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.LinkedHashSet;
-
 import org.json.*;
 import ru.itmo.server.src.GivenClasses.*;
-//import Exceptions.*;
 
 public class DataDAO implements DAO<Worker>{
 	/** 
 	 *Collection class
-	 *@param DAO<Worker> dao, String[] args
-	 *@author AP
-	*/
+	 */
 	
-	private LinkedHashSet<Worker> database = new LinkedHashSet<Worker>();
+	private final LinkedHashSet<Worker> database = new LinkedHashSet<Worker>();
 	private String filepath;
 	private static boolean flag;
 	public static boolean getFlag() {
@@ -40,7 +36,6 @@ public class DataDAO implements DAO<Worker>{
 	}
 	
 	/**Чтение из файла*/
-	// TODO
 	@Override
 	public void DateRead(String filename) {
 		String hname;
@@ -90,11 +85,7 @@ public class DataDAO implements DAO<Worker>{
 					//id += 1;
 				}
 			}
-			catch(IllegalArgumentException e) {
-				flag = false;
-				System.out.println(e.getMessage());
-			}
-			catch(JSONException e) {
+			catch(IllegalArgumentException | JSONException e) {
 				flag = false;
 				System.out.println(e.getMessage());
 			}
@@ -137,7 +128,6 @@ public class DataDAO implements DAO<Worker>{
 
 	@Override
 	public LinkedHashSet<Worker> getAll(){
-		
 		return database;
 	}
 	@Override

@@ -1,16 +1,12 @@
 package ru.itmo.server.src.Comms;
 
-import java.nio.ByteBuffer;
-import java.nio.channels.SocketChannel;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayDeque;
-
 import com.google.gson.reflect.TypeToken;
 import ru.itmo.common.connection.Request;
-import ru.itmo.common.connection.Response;
 import ru.itmo.server.src.Exceptions.LimitException;
 import ru.itmo.server.src.Exceptions.NullException;
 import ru.itmo.server.src.GivenClasses.*;
+import ru.itmo.server.src.containers.stringQueue;
 
 import java.io.*;
 import java.util.ArrayList;
@@ -81,28 +77,24 @@ public class Update implements Commands{
 
 		return "Worker " + w.getName() + " was successfully added with all fields";
 	}
-	public void update_by_id(DAO<Worker> dao, BufferedReader on) throws IOException{
+	public String update_by_id(DAO<Worker> dao, BufferedReader on) throws IOException{
 		Add dd = new Add();
+		String reply = "";
 		try {
-			long id = Long.valueOf(on.readLine().split(" ")[0]);
+			long id = Long.parseLong(on.readLine().split(" ")[0]);
 			Worker w = dao.get(id);
 			if(w == null) {
-				String reply = GistStaff.getReply();
 				reply += "\nThere's no guy with such id\n";
-				GistStaff.setReply(reply);
 			}
 			else {
-				dd.add_read_exec(w, on);
-				String reply = GistStaff.getReply();
+				reply += dd.add_read_exec(w, on, reply).getMessage();
 				reply += "\nWorker with id " + w.getId() + " was successfully updated\n";
-				GistStaff.setReply(reply);
 			}
 		}
 		catch(IllegalArgumentException e) {
-			String reply = GistStaff.getReply();
 			reply += "\nId should be type long for update func\n";
-			GistStaff.setReply(reply);
 		}
+		return reply;
 	}
 	
 	@Override 
@@ -114,29 +106,23 @@ public class Update implements Commands{
 		return "update";
 	}
 	@Override
-	public ArrayDeque<Commands> executeCommand(DAO<Worker> dao, ArrayDeque<Commands> q, BufferedReader on) throws IOException{
+	public stringQueue executeCommand(DAO<Worker> dao, ArrayDeque<Commands> q, BufferedReader on) throws IOException{
 		Update upd = new Update();
 		q = History.cut(q);
 		q.addLast(upd);
 
-		upd.update_by_id(dao, on);
-
-		return q;
+		String reply = upd.update_by_id(dao, on);
+		return new stringQueue(reply, q);
 	}
 	@Override
-	public ArrayDeque<Commands> requestExecute(DAO<Worker> dao, ArrayDeque<Commands> q, BufferedReader on, Request request, SocketChannel client) throws IOException{
+	public stringQueue requestExecute(DAO<Worker> dao, ArrayDeque<Commands> q, Request request) throws IOException{
 		Update upd = new Update();
 		q = History.cut(q);
 		q.addLast(upd);
 
 		TypeToken<ArrayList<String>> typeToken = new TypeToken<ArrayList<String>>(){};
-		String update = upd.just_update((ArrayList<String>) request.getArgumentAs(typeToken), dao);
-		Response response = new Response(
-				Response.cmdStatus.OK,
-				update
-		);
-		client.write(ByteBuffer.wrap(response.toJson().getBytes(StandardCharsets.UTF_8)));
+		String reply = upd.just_update((ArrayList<String>) request.getArgumentAs(typeToken), dao);
 
-		return q;
+		return new stringQueue(reply, q);
 	}
 }

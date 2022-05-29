@@ -1,31 +1,27 @@
 package ru.itmo.server.src.Comms;
+
 import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.channels.SocketChannel;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayDeque;
 import java.io.BufferedReader;
 import ru.itmo.common.connection.Request;
-import ru.itmo.common.connection.Response;
 import ru.itmo.server.src.GivenClasses.Worker;
+import ru.itmo.server.src.containers.stringQueue;
 
 public class History implements Commands{
 	/** 
 	 *Prints last seven commands
-	 *@param DAO<Worker> dao, Status state
-	 *@author BARIS 
 	*/
 	private ArrayDeque<Commands> q;
 	public String history(ArrayDeque<Commands> q) {
 		this.q = new ArrayDeque<Commands>(q);
-		String list = ""; 
+		StringBuilder list = new StringBuilder();
 		while(this.q.peek() != null) {
 			//System.out.println(this.q.pop().getName());
 			Commands cmd = this.q.pop();
-			list += cmd.getName() + "\n";
+			list.append(cmd.getName()).append("\n");
 		}
-		return list;
-		
+
+		return list.toString();
 	}
 	public static ArrayDeque<Commands> cut(ArrayDeque<Commands> q) {
 		if(q != null && q.size() == 7) {
@@ -43,33 +39,23 @@ public class History implements Commands{
 		return "history";
 	}
 	@Override
-	public ArrayDeque<Commands> executeCommand(DAO<Worker> dao, ArrayDeque<Commands> q, BufferedReader on){
+	public stringQueue executeCommand(DAO<Worker> dao, ArrayDeque<Commands> q, BufferedReader on){
 		History history = new History();
-		String hist = history.history(q);
 
-		if(GistStaff.getFlag()) {
-			String reply = GistStaff.getReply();
-			reply += hist;
-			GistStaff.setReply(reply);
-		}
-
+		String reply = history.history(q);
 		q = History.cut(q);
 		q.addLast(history);
-		return q;
+
+		return new stringQueue(reply, q);
 	}
 	@Override
-	public ArrayDeque<Commands> requestExecute(DAO<Worker> dao, ArrayDeque<Commands> q, BufferedReader on, Request request, SocketChannel client) throws IOException {
+	public stringQueue requestExecute(DAO<Worker> dao, ArrayDeque<Commands> q, Request request) throws IOException {
 		History history = new History();
-		String hist = history.history(q);
+
+		String reply = history.history(q);
 		q = History.cut(q);
 		q.addLast(history);
 
-		Response response = new Response(
-				Response.cmdStatus.OK,
-				hist
-		);
-		client.write(ByteBuffer.wrap(response.toJson().getBytes(StandardCharsets.UTF_8)));
-
-		return q;
+		return new stringQueue(reply, q);
 	}
 }

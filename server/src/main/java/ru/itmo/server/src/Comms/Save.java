@@ -2,20 +2,13 @@ package ru.itmo.server.src.Comms;
 
 import ru.itmo.common.connection.Request;
 import ru.itmo.server.src.GivenClasses.Worker;
-
+import ru.itmo.server.src.containers.stringQueue;
 import java.io.BufferedReader;
-import java.nio.channels.SocketChannel;
 import java.util.ArrayDeque;
 import java.util.LinkedHashSet;
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
-//import java.time.LocalDateTime;
-//import java.time.format.*;
-//import org.json.*;
-//import javax.json.*;
-//import org.json.*;
-//import java.io.File;
 
 public class Save implements Commands{
 	/** 
@@ -24,13 +17,10 @@ public class Save implements Commands{
 	*/
 	
 	public void save(DAO<Worker> dao, String filepath) {
-		//DateTimeFormatter format = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+
 		try {
 			BufferedWriter out = new BufferedWriter(new FileWriter(filepath));
-			//File fl = new File(filepath);
 			LinkedHashSet<Worker> bd = new LinkedHashSet<Worker>(dao.getAll());
-			//JsonObject arr = Json.createObjectBuilder().build();
-			//JsonObject arr = Json.createObjectBuilder().build();
 			out.write("{\n\t\"workers\":[");
 			int i = 0;
 			for(Worker w : bd) { 
@@ -63,10 +53,7 @@ public class Save implements Commands{
 				if(i != bd.size()-1) {
 					out.write(",");
 				}
-				//out.write("\n\t" + val.toString());
 				i += 1;
-				//arr.put("workers", val);  
-				//out.newLine(); out.write("{");				
 			}
 			out.write("\n\t]\n}");
 			out.close();
@@ -86,17 +73,18 @@ public class Save implements Commands{
 		return "save";
 	}
 	@Override
-	public ArrayDeque<Commands> executeCommand(DAO<Worker> dao, ArrayDeque<Commands> q, BufferedReader on){
+	public stringQueue executeCommand(DAO<Worker> dao, ArrayDeque<Commands> q, BufferedReader on){
 		Save save = new Save();
 		q = History.cut(q);
 		q.addLast(save);
+
 		String filepath = System.getenv("FPATH");
 		save.save(dao, filepath);
-		return q;
+		return new stringQueue("", q);
 	}
 	@Override
-	public ArrayDeque<Commands> requestExecute(DAO<Worker> dao, ArrayDeque<Commands> q, BufferedReader on, Request request, SocketChannel client) throws IOException{
+	public stringQueue requestExecute(DAO<Worker> dao, ArrayDeque<Commands> q, Request request) throws IOException{
 
-		return q;
+		return new stringQueue("", q);
 	}
 }

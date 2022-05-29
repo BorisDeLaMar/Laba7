@@ -1,27 +1,19 @@
 package ru.itmo.server.src.Comms;
 
 import com.google.gson.JsonSyntaxException;
-//import ru.itmo.common.LAB5.src.Exceptions.*;
-
-import java.nio.ByteBuffer;
-import java.nio.channels.SocketChannel;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayDeque;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.util.ArrayList;
-//import ru.itmo.common.LAB5.src.GivenClasses.*;
 import com.google.gson.reflect.TypeToken;
 import ru.itmo.common.connection.Request;
-import ru.itmo.common.connection.Response;
 import ru.itmo.server.src.Exceptions.LimitException;
 import ru.itmo.server.src.Exceptions.NullException;
 import ru.itmo.server.src.GivenClasses.*;
+import ru.itmo.server.src.containers.booleanString;
+import ru.itmo.server.src.containers.stringQueue;
 
 public class Add implements Commands{
-	private boolean flag = true;
-	public boolean getFlag(){ return flag; }
-	public void setFlag(boolean flag){ this.flag = flag;}
 	public String justAdd(DAO<Worker> dao, ArrayList<String> args){
 		Worker w = new Worker();
 		try {
@@ -82,169 +74,38 @@ public class Add implements Commands{
 		//System.out.println(args);
 		//dao.appendToList(w);
 	}
-	public void add(DAO<Worker> d, BufferedReader on) throws IOException{
-		/** 
-		 *Add function
-		 *@param DAO<Worker> dao, String[] args
-		 *@author BARIS  
-		*/
+	public String add_exec(DAO<Worker> dao, BufferedReader on) {
+		String reply = "";
 		Worker w = new Worker();
-		add_read(w, on);
-		w.setCreationDate();
+		boolean flag = true;
 		try {
-			w.setID(Worker.findPossibleID());
-			d.appendToList(w);
-		}
-		catch(LimitException e) {
-			System.out.println(e.getMessage());
-		}
-		System.out.println("Worker successfully added");
-	}
-	public void add_exec(DAO<Worker> dao, BufferedReader on) {
-		String reply = GistStaff.getReply();
-		Worker w = new Worker();
-		try {
-			setFlag(add_read_exec(w, on));
+			booleanString booleanString = add_read_exec(w, on, reply);
+			flag = booleanString.getFlag();
+			reply += booleanString.getMessage();
 		}
 		catch(IOException e) {
-			reply = GistStaff.getReply();
 			reply += "\n" + e.getMessage() + "\n";
-			GistStaff.setReply(reply);
 		}
-		boolean f = getFlag();
-		//scam.nextLine();
-		if(!f) {
-			reply = GistStaff.getReply();
+		if(!flag) {
 			reply += "\nWorker from file wasn't added or updated because of incorrect input" + "\n";
-			GistStaff.setReply(reply);
 		}
 		else {
 			w.setCreationDate();
-			reply = GistStaff.getReply();
 			reply += "\nWorker from file was successfully added\n";
-			GistStaff.setReply(reply);
 			try {
 				w.setID(Worker.findPossibleID());
 				dao.appendToList(w);
 			}
 			catch(LimitException e) {
-				reply = GistStaff.getReply();
 				reply += "\n" + e.getMessage() + "\n";
-				GistStaff.setReply(reply);
-			}
-			setFlag(true);
-			//System.out.println("Worker successfully added");
-		}
-	}
-	public void add_read(Worker w, BufferedReader on) throws IOException{
-		int i = 0;
-		while(i < 8) {
-			if (i == 0) {
-				try {
-					System.out.print("Enter name: ");
-					String name = on.readLine().split(" ")[0];
-					i = 1;
-					w.setName(name);
-				}
-				catch(NullException e) {
-					i = 0;
-					System.out.println(e.getMessage());
-				}
-			}
-			if(i == 1) {
-				try {
-					System.out.print("Enter salary: ");
-					String salo = on.readLine().split(" ")[0];
-					Long salary = Long.valueOf(salo);
-					i = 2;
-					w.setSalary(salary);
-				}
-				catch(NumberFormatException e) {
-					i = 1;
-					System.out.println("Salary should be just a number");
-				}
-				catch(LimitException e) {
-					i = 1;
-					System.out.println(e.getMessage());
-				}
-			}
-			if(i == 2) {
-				try {
-					System.out.print("Enter position: ");
-					String posit = on.readLine().split(" ")[0];
-					i = 3;
-					Position pos =  Position.valueOf(posit);
-					w.setPosition(pos);
-				}
-				catch(IllegalArgumentException e) {
-					i = 2;
-					System.out.println("Available values for position are: " + Position.strConvert());
-				}
-			}
-			if(i == 3) {
-				try {
-					System.out.print("Enter status: ");
-					String stata = on.readLine().split(" ")[0];
-					//scam.nextLine();
-					i = 4;
-					Status state = Status.valueOf(stata);
-					w.setStatus(state);
-				}
-				catch(IllegalArgumentException e) {
-					i = 3;
-					System.out.println("Available values for status are: " + Status.strConvert());
-				}
-				catch(NullException e) {
-					i = 3;
-					System.out.println(e.getMessage());
-				}
-			}
-			if(i == 4) {
-				try {
-					System.out.println("Enter organization: ");
-					String[] arg = on.readLine().split(" ");
-					i = 6;
-					Organization org = new Organization(arg[0], arg[1]);
-					if(!Organization.getFlag()) {
-						i = 4;
-					}
-					Organization.setFlag(true);
-					w.setOrganization(org);
-				}
-				catch(ArrayIndexOutOfBoundsException e) {
-					i = 4;
-					System.out.println("There should be two args in organization field: name and type\nAvailbale organizationtypes: " + OrganizationType.strConvert());
-				}
-			}
-			if(i == 6) {
-				try {
-					System.out.print("Enter coordinates: ");
-					String[] arg = on.readLine().split(" ");
-					i = 8;
-					Coordinates cords = new Coordinates(arg[0], arg[1]);
-					if(!Coordinates.getFlag()) {
-						i = 6;
-					}
-					Coordinates.setFlag();
-					try {
-						w.setCoordinates(cords);
-					}
-					catch(LimitException e) {
-						i = 6;
-						System.out.println(e.getMessage());
-					}
-				}
-				catch(ArrayIndexOutOfBoundsException e) {
-					i = 6;
-					System.out.println("There should be two args in coordinates field: x and y");
-				}
 			}
 		}
+		return reply;
 	}
-	public boolean add_read_exec(Worker w, BufferedReader on) throws IOException {
-		String reply = GistStaff.getReply();
+	public booleanString add_read_exec(Worker w, BufferedReader on, String reply) throws IOException {
 		int i = 0;
 		boolean flag = true;
+		StringBuilder replyBuilder = new StringBuilder(reply);
 		while(i < 8) {
 			if (i == 0) {
 				try {
@@ -255,31 +116,25 @@ public class Add implements Commands{
 				catch(NullException e) {
 					i = 8;
 					flag = false;
-					reply = GistStaff.getReply();
-					reply += "\n" + e.getMessage() + "\n";
-					GistStaff.setReply(reply);
+					replyBuilder.append("\n").append(e.getMessage()).append("\n");
 				}
 			}
 			if(i == 1) {
 				try {
 					String[] salo = on.readLine().split(" ");
-					Long salary = Long.valueOf(salo[0]);
+					long salary = Long.parseLong(salo[0]);
 					i = 2;
 					w.setSalary(salary);
 				}
 				catch(NumberFormatException e) {
 					i = 8;
 					flag = false;
-					reply = GistStaff.getReply();
-					reply += "\nSalary should be just a number" + "\n";
-					GistStaff.setReply(reply);
+					replyBuilder.append("\nSalary should be just a number" + "\n");
 				}
 				catch(LimitException e) {
 					i = 8;
 					flag = false;
-					reply = GistStaff.getReply();
-					reply += "\n" + e.getMessage() + "\n";
-					GistStaff.setReply(reply);
+					replyBuilder.append("\n").append(e.getMessage()).append("\n");
 				}
 			}
 			if(i == 2) {
@@ -292,9 +147,7 @@ public class Add implements Commands{
 				catch(IllegalArgumentException e) {
 					i = 8;
 					flag = false;
-					reply = GistStaff.getReply();
-					reply += "\nAvailable values for position are: " + Position.strConvert() + "\n";
-					GistStaff.setReply(reply);
+					replyBuilder.append("\nAvailable values for position are: ").append(Position.strConvert()).append("\n");
 				}
 			}
 			if(i == 3) {
@@ -308,69 +161,73 @@ public class Add implements Commands{
 				catch(IllegalArgumentException e) {
 					i = 8;
 					flag = false;
-					reply = GistStaff.getReply();
-					reply += "\nAvailable values for status are: " + Status.strConvert() + "\n";
-					GistStaff.setReply(reply);
+					replyBuilder.append("\nAvailable values for status are: ").append(Status.strConvert()).append("\n");
 				}
 				catch(NullException e) {
 					i = 8;
 					flag = false;
-					reply = GistStaff.getReply();
-					reply += "\n" + e.getMessage() + "\n";
-					GistStaff.setReply(reply);
+					replyBuilder.append("\n").append(e.getMessage()).append("\n");
 				}
 			}
 			if(i == 4) {
 				try {
 					String[] arg = on.readLine().split(" ");
 					i = 6;
-					Organization org = new Organization(arg[0], arg[1]);
-					if(!Organization.getFlag()) {
-						i = 8;
-						flag = false;
+					Organization organization = new Organization();
+					Organization org = organization.getOrganization(arg[0], arg[1]);
+					if(org.getType() == null) {
+						replyBuilder.append("\n").append("Available organization types are: ").append(OrganizationType.strConvert()).append("\n");
 					}
-					Organization.setFlag(true);
 					w.setOrganization(org);
 				}
 				catch(ArrayIndexOutOfBoundsException e) {
 					i = 8;
 					flag = false;
-					reply = GistStaff.getReply();
-					reply += "\nThere should be two args in organization field: name and type\nAvailbale organizationtypes: " + OrganizationType.strConvert() + '\n';
-					GistStaff.setReply(reply);
+					replyBuilder.append("\nThere should be two args in organization field: name and type\nAvailbale organizationtypes: ").append(OrganizationType.strConvert()).append('\n');
 				}
 			}
 			if(i == 6) {
 				try {
 					String[] arg = on.readLine().split(" ");
 					i = 8;
-					Coordinates cords = new Coordinates(arg[0], arg[1]);
-					if(!Coordinates.getFlag()) {
-						flag = false;
-					}
-					reply = GistStaff.getReply();
-					Coordinates.setFlag();
+					double y = -228.1337; long x = -228; boolean mistake = false;
 					try {
-						w.setCoordinates(cords);
+						y = Double.parseDouble(arg[1]);
 					}
-					catch(LimitException e) {
+					catch(IllegalArgumentException e) {
+						mistake = true;
+						replyBuilder.append("\n'y' should be type double" + "\n");
+					}
+					try {
+						x = Long.parseLong(arg[0]);
+					}
+					catch(IllegalArgumentException e) {
+						mistake = true;
+						replyBuilder.append("\n'x' should be type long" + "\n");
+					}
+					if(!mistake) {
+						try {
+							Coordinates cords = new Coordinates(x, y);
+							w.setCoordinates(cords);
+						}
+						catch(LimitException e) {
+							flag = false;
+							replyBuilder.append("\n").append(e.getMessage()).append("\n");
+						}
+					}
+					else{
 						flag = false;
-						reply = GistStaff.getReply();
-						reply += "\n" + e.getMessage() + "\n";
-						GistStaff.setReply(reply);
 					}
 				}
 				catch(ArrayIndexOutOfBoundsException e) {
 					i = 8;
 					flag = false;
-					reply = GistStaff.getReply();
-					reply += "\nThere should be two args in coordinates field: x and y" + "\n";
-					GistStaff.setReply(reply);
+					replyBuilder.append("\nThere should be two args in coordinates field: x and y" + "\n");
 				}
 			}
 		}
-		GistStaff.setReply(reply);
-		return flag;
+		reply = replyBuilder.toString();
+		return new booleanString(flag, reply);
 	}
 	@Override
 	public String getGist() {
@@ -382,41 +239,26 @@ public class Add implements Commands{
 	}
 	//@SuppressWarnings("finally")
 	@Override
-	public ArrayDeque<Commands> executeCommand(DAO<Worker> dao, ArrayDeque<Commands> q, BufferedReader on) throws IOException{
+	public stringQueue executeCommand(DAO<Worker> dao, ArrayDeque<Commands> q, BufferedReader on) throws IOException{
 		q = History.cut(q);
 		q.addLast(this);
-		if(GistStaff.getFlag()) {
-			this.add_exec(dao, on);
-			/*String reply = GistStaff.getReply();
-			reply += help;
-			GistStaff.setReply(reply);*/
-		}
-		else {
-			this.add(dao, on);
-		}
-		return q;
+
+		return new stringQueue(this.add_exec(dao, on), q);
 	}
 	@Override
-	public ArrayDeque<Commands> requestExecute(DAO<Worker> dao, ArrayDeque<Commands> q, BufferedReader on, Request request, SocketChannel client) throws IOException{
+	public stringQueue requestExecute(DAO<Worker> dao, ArrayDeque<Commands> q, Request request) throws IOException{
 		q = History.cut(q);
 		q.addLast(this);
-		Response response;
+
+		String reply = "";
 		try {
 			TypeToken<ArrayList<String>> typeToken = new TypeToken<ArrayList<String>>(){};
-			String reply = this.justAdd(dao, (ArrayList<String>) request.getArgumentAs(typeToken));
-			response = new Response(
-					Response.cmdStatus.OK,
-					reply
-			);
+			reply += this.justAdd(dao, (ArrayList<String>) request.getArgumentAs(typeToken));
 		}
 		catch(JsonSyntaxException e){
-			response = new Response(
-					Response.cmdStatus.ERROR,
-					"Not valid arguments for function 'add'"
-			);
+			reply += "Not valid arguments for function 'add'";
 		}
-		client.write(ByteBuffer.wrap(response.toJson().getBytes(StandardCharsets.UTF_8)));
 
-		return q;
+		return new stringQueue(reply, q);
 	}
 }

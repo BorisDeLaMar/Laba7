@@ -1,15 +1,10 @@
 package ru.itmo.server.src.Comms;
 
 import ru.itmo.common.connection.Request;
-import ru.itmo.common.connection.Response;
 import ru.itmo.server.src.GivenClasses.Worker;
-
-import java.nio.ByteBuffer;
-import java.nio.channels.SocketChannel;
-import java.nio.charset.StandardCharsets;
+import ru.itmo.server.src.containers.stringQueue;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
-//import java.util.LinkedHashSet;
 import java.io.*;
 
 public class RemoveLower implements Commands{
@@ -23,9 +18,9 @@ public class RemoveLower implements Commands{
 		int flag = 0;
 		try {
 			ArrayList<Worker> dd = new ArrayList<Worker>(dao.getAll());
-			for(int i = 0; i < dd.size(); i++) {
-				if(dd.get(i).hashCode() < w.hashCode()) {
-					rm.remove_by_id(dao, dd.get(i).getId());
+			for (Worker worker : dd) {
+				if (worker.hashCode() < w.hashCode()) {
+					rm.remove_by_id(dao, worker.getId());
 					flag += 1;
 				}
 			}
@@ -35,27 +30,25 @@ public class RemoveLower implements Commands{
 			return "There's no guy with such id";
 		}
 	}
-	public void remove_lower(DAO<Worker> dao, long id) {
+	public String remove_lower(DAO<Worker> dao, long id) {
 		Worker w = dao.get(id);
+		StringBuilder reply = new StringBuilder();
 		if(w == null){
-			String reply = GistStaff.getReply();
-			reply += "\nThere is no worker with id " + id + "\n";
-			GistStaff.setReply(reply);
+			reply.append("\nThere is no worker with id ").append(id).append("\n");
 		}
 		else {
 			try {
 				ArrayList<Worker> dd = new ArrayList<Worker>(dao.getAll());
-				for (int i = 0; i < dd.size(); i++) {
-					if (dd.get(i).hashCode() < w.hashCode()) {
-						rm.remove_by_id(dao, dd.get(i).getId());
+				for (Worker worker : dd) {
+					if (worker.hashCode() < w.hashCode()) {
+						reply.append(rm.remove_by_id(dao, worker.getId()));
 					}
 				}
 			} catch (NullPointerException e) {
-				String reply = GistStaff.getReply();
-				reply += "\nThere's no guy with such id\n";
-				GistStaff.setReply(reply);
+				reply.append("\nThere's no guy with such id\n");
 			}
 		}
+		return reply.toString();
 	}
 	
 	@Override
@@ -67,40 +60,32 @@ public class RemoveLower implements Commands{
 		return "remove_lower";
 	}
 	@Override
-	public ArrayDeque<Commands> executeCommand(DAO<Worker> dao, ArrayDeque<Commands> q, BufferedReader on) throws IOException{
+	public stringQueue executeCommand(DAO<Worker> dao, ArrayDeque<Commands> q, BufferedReader on) throws IOException{
 		RemoveLower rmvl = new RemoveLower();
 		q = History.cut(q);
 		q.addLast(rmvl);
+
+		String reply = "";
 		try {
-			long id = Long.valueOf(on.readLine().split(" ")[0]);
-			rmvl.remove_lower(dao, id);
+			long id = Long.parseLong(on.readLine().split(" ")[0]);
+			reply += rmvl.remove_lower(dao, id);
 		}
 		catch(IllegalArgumentException e) {
-			String reply = GistStaff.getReply();
 			reply += "\nId should be type long\n";
-			GistStaff.setReply(reply);
 		}
 		catch(ArrayIndexOutOfBoundsException e) {
-			String reply = GistStaff.getReply();
 			reply += "\nThere should be an index argument\n";
-			GistStaff.setReply(reply);
 		}
 
-		return q;
+		return new stringQueue(reply, q);
 	}
 	@Override
-	public ArrayDeque<Commands> requestExecute(DAO<Worker> dao, ArrayDeque<Commands> q, BufferedReader on, Request request, SocketChannel client) throws IOException{
+	public stringQueue requestExecute(DAO<Worker> dao, ArrayDeque<Commands> q, Request request) throws IOException{
 		RemoveLower rmv = new RemoveLower();
 		q = History.cut(q);
 		q.addLast(rmv);
-		String remove = rmv.just_remove_lower(dao, request.getArgumentAs(Long.class));
 
-		Response response = new Response(
-				Response.cmdStatus.OK,
-				remove
-		);
-		client.write(ByteBuffer.wrap(response.toJson().getBytes(StandardCharsets.UTF_8)));
-
-		return q;
+		String reply = rmv.just_remove_lower(dao, request.getArgumentAs(Long.class));
+		return new stringQueue(reply, q);
 	}
 }

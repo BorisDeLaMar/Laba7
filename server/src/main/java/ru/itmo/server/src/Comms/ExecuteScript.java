@@ -1,27 +1,22 @@
 package ru.itmo.server.src.Comms;
+
+import ru.itmo.common.connection.Request;
+import ru.itmo.server.src.GivenClasses.Worker;
+import ru.itmo.server.src.containers.stringQueue;
 import java.io.BufferedReader;
-import java.nio.ByteBuffer;
-import java.nio.channels.SocketChannel;
-import java.nio.charset.StandardCharsets;
-import java.util.Stack;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
-
-import ru.itmo.common.connection.Request;
-import ru.itmo.common.connection.Response;
-import ru.itmo.server.src.GivenClasses.Worker;
+import java.util.Stack;
 
 public class ExecuteScript implements Commands{
 	protected static ArrayDeque<Commands> q;
 
 	private static final Stack<String> file_bd = new Stack<String>();
-	public static ArrayDeque<Commands> just_execute_script(DAO<Worker> dao, ArrayDeque<Commands> qu, BufferedReader in, Request request, SocketChannel client) throws IOException{
-		String reply = GistStaff.getReply();
+	public static stringQueue just_execute_script(DAO<Worker> dao, ArrayDeque<Commands> qu, Request request) throws IOException{
+		StringBuilder reply = new StringBuilder();
 		ArrayList<Commands> cmd = Help.getLst();
-		GistStaff.setFlag(true);
-
 		String filename = request.getArgumentAs(String.class);
 		q = qu;
 
@@ -30,74 +25,57 @@ public class ExecuteScript implements Commands{
 			for(String s : file_bd) {
 				if(filename.equals(s)) {
 					f = false;
-					reply = GistStaff.getReply();
-					reply += "\nFile with name " + filename + " was already processed. I've killed it by myself!\n";
-					GistStaff.setReply(reply);
+					reply.append("\nFile with name ").append(filename).append(" was already processed. I've killed it by myself!\n");
 				}
 			}
 			if(f) {
 				file_bd.push(filename);
 				String command = "";
 				while(((command = on.readLine()) != null && !command.isEmpty()) && Exit.getExit()) {//Exit.getExit() ??
-					//in.hasNext()
-					//String[] exec = new String[1];
-					//String command = line[0];
-					//System.out.println(cmd.size());
-					//try-ем надо оборачивать сам while?
 					command = command.split(" ")[0];
 					int flag = 0;
 					for (Commands cm : cmd) {
 						if (cm.getName().equals(command)) {
 							flag += 1;
-							q = cm.executeCommand(dao, q, on);
-							reply = GistStaff.getReply();
+							stringQueue answer = cm.executeCommand(dao, q, on);
+							q = answer.getQueue();
+							reply.append(answer.getString());
 						}
 					}
 					if(flag == 0) {
-						reply = GistStaff.getReply();
-						reply += "\nUnknown command. Type 'help' for the list of available commands\n";
-						GistStaff.setReply(reply);
+						reply.append("\nUnknown command. Type 'help' for the list of available commands\n");
 					}
 				}
 			}
-			GistStaff.setReply(reply);
+
 			on.close();
-			return q;
+			return new stringQueue(reply.toString(), q);
 		}
 		catch(java.io.FileNotFoundException e) {
-			//System.out.println(filename); Кто-то удваивает скобки (гсон??) два раза
-			reply = GistStaff.getReply();
-			reply += "\nThere is no file with such name, " + filename + " does not exist. Watch out and try function again!\n";
-			GistStaff.setReply(reply);
-			return q;
+			reply.append("\nThere is no file with such name, ").append(filename).append(" does not exist. Watch out and try function again!\n");
+			return new stringQueue(reply.toString(), q);
 		}
 		catch(IOException e) {
-			reply = GistStaff.getReply();
-			reply += "\n" + e.getMessage() + "\n";
-			GistStaff.setReply(reply);
-			return q;
+			reply.append("\n").append(e.getMessage()).append("\n");
+			return new stringQueue(reply.toString(), q);
 		}
 	}
-	public static ArrayDeque<Commands> execute_script(DAO<Worker> dao, ArrayDeque<Commands> qu, BufferedReader in) throws IOException{
+	/**
+	 *Executes script from file
+	 *@author BARIS
+	 */
+	public static stringQueue execute_script(DAO<Worker> dao, ArrayDeque<Commands> qu, BufferedReader in) throws IOException{
 		q = qu;
-		String reply = GistStaff.getReply();
+		StringBuilder reply = new StringBuilder();
 		String filename = "";
 		filename = in.readLine();
 		ArrayList<Commands> cmd = Help.getLst();
-		GistStaff.setFlag(true);
-		/** 
-		 *Executes script from file
-		 *@param All the available commands
-		 *@author BARIS  
-		*/
 		try(BufferedReader on = new BufferedReader(new FileReader(filename))){
 			boolean f = true;
 			for(String s : file_bd) {
 				if(filename.equals(s)) {
 					f = false;
-					reply = GistStaff.getReply();
-					reply += "\nFile with name " + filename + " was already processed. I've killed it by myself!\n";
-					GistStaff.setReply(reply);
+					reply.append("\nFile with name ").append(filename).append(" was already processed. I've killed it by myself!\n");
 				}
 			}
 			if(f) {
@@ -113,32 +91,27 @@ public class ExecuteScript implements Commands{
 					for (Commands cm : cmd) {
 						if (cm.getName().equals(command)) {
 							flag += 1;
-							q = cm.executeCommand(dao, q, on);
-							reply = GistStaff.getReply();
+							stringQueue answer = cm.executeCommand(dao, q, on);
+							q = answer.getQueue();
+							reply.append(answer.getString());
 						}
 					}
 					if(flag == 0) {
-						reply = GistStaff.getReply();
-						reply += "\nUnknown command. Type 'help' for the list of available commands\n";
-						GistStaff.setReply(reply);
+						reply.append("\nUnknown command. Type 'help' for the list of available commands\n");
 					}
 				}
 			}
-			GistStaff.setReply(reply);
+
 			on.close();
-			return q;
+			return new stringQueue(reply.toString(), q);
 		}
 		catch(java.io.FileNotFoundException e) {
-			reply = GistStaff.getReply();
-			reply += "\nThere's no file with such name, " + filename + " does not exist. Watch out and try function again!\n";
-			GistStaff.setReply(reply);
-			return q;
+			reply.append("\nThere's no file with such name, ").append(filename).append(" does not exist. Watch out and try function again!\n");
+			return new stringQueue(reply.toString(), q);
 		}
 		catch(IOException e) {
-			reply = GistStaff.getReply();
-			reply += "\n" + e.getMessage() + "\n";
-			GistStaff.setReply(reply);
-			return q;
+			reply.append("\n").append(e.getMessage()).append("\n");
+			return new stringQueue(reply.toString(), q);
 		}
 	}
 	
@@ -152,28 +125,22 @@ public class ExecuteScript implements Commands{
 		return "execute_script";
 	}
 	@Override
-	public ArrayDeque<Commands> executeCommand(DAO<Worker> dao, ArrayDeque<Commands> q, BufferedReader on) throws IOException{
+	public stringQueue executeCommand(DAO<Worker> dao, ArrayDeque<Commands> q, BufferedReader on) throws IOException{
 		ExecuteScript exec = new ExecuteScript();
 		q = History.cut(q);
 		q.addLast(exec);
-		q = ExecuteScript.execute_script(dao, q, on); //execute_script C:\vpd\PudgePudgePudgePudge.txt execute_script C:\vpd\PudgePudgePudgePudge.txt
-		return q;
+
+		//execute_script C:\vpd\PudgePudgePudgePudge.txt execute_script C:\vpd\PudgePudgePudgePudge.txt
+		return ExecuteScript.execute_script(dao, q, on);
 	}
 	@Override
-	public ArrayDeque<Commands> requestExecute(DAO<Worker> dao, ArrayDeque<Commands> q, BufferedReader on, Request request, SocketChannel client) throws IOException{
+	public stringQueue requestExecute(DAO<Worker> dao, ArrayDeque<Commands> q, Request request) throws IOException{
 		ExecuteScript exec = new ExecuteScript();
 		q = History.cut(q);
 		q.addLast(exec);
 
-		Response response;
-		q = ExecuteScript.just_execute_script(dao, q, on, request, client);
-		response = new Response(
-				Response.cmdStatus.OK,
-				GistStaff.getReply()
-		);
-		client.write(ByteBuffer.wrap(response.toJson().getBytes(StandardCharsets.UTF_8)));
-
-		return q;
+		ExecuteScript.file_bdCleaner();
+		return ExecuteScript.just_execute_script(dao, q, request);
 	}
 	public static void file_bdCleaner() {
 		file_bd.clear();
