@@ -6,6 +6,7 @@ import ru.itmo.server.src.containers.stringQueue;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
+import java.sql.SQLException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Stack;
@@ -14,7 +15,7 @@ public class ExecuteScript implements Commands{
 	protected static ArrayDeque<Commands> q;
 
 	private static final Stack<String> file_bd = new Stack<String>();
-	public static stringQueue just_execute_script(DAO<Worker> dao, ArrayDeque<Commands> qu, Request request) throws IOException{
+	public static stringQueue just_execute_script(DAO<Worker> dao, ArrayDeque<Commands> qu, Request request) throws IOException, SQLException {
 		StringBuilder reply = new StringBuilder();
 		ArrayList<Commands> cmd = Help.getLst();
 		String filename = request.getArgumentAs(String.class);
@@ -37,7 +38,7 @@ public class ExecuteScript implements Commands{
 					for (Commands cm : cmd) {
 						if (cm.getName().equals(command)) {
 							flag += 1;
-							stringQueue answer = cm.executeCommand(dao, q, on);
+							stringQueue answer = cm.executeCommand(dao, q, on, request.getUser_login());
 							q = answer.getQueue();
 							reply.append(answer.getString());
 						}
@@ -64,7 +65,7 @@ public class ExecuteScript implements Commands{
 	 *Executes script from file
 	 *@author BARIS
 	 */
-	public static stringQueue execute_script(DAO<Worker> dao, ArrayDeque<Commands> qu, BufferedReader in) throws IOException{
+	public static stringQueue execute_script(DAO<Worker> dao, ArrayDeque<Commands> qu, BufferedReader in, String user_login) throws IOException, SQLException{
 		q = qu;
 		StringBuilder reply = new StringBuilder();
 		String filename = "";
@@ -91,7 +92,7 @@ public class ExecuteScript implements Commands{
 					for (Commands cm : cmd) {
 						if (cm.getName().equals(command)) {
 							flag += 1;
-							stringQueue answer = cm.executeCommand(dao, q, on);
+							stringQueue answer = cm.executeCommand(dao, q, on, user_login);
 							q = answer.getQueue();
 							reply.append(answer.getString());
 						}
@@ -125,16 +126,16 @@ public class ExecuteScript implements Commands{
 		return "execute_script";
 	}
 	@Override
-	public stringQueue executeCommand(DAO<Worker> dao, ArrayDeque<Commands> q, BufferedReader on) throws IOException{
+	public stringQueue executeCommand(DAO<Worker> dao, ArrayDeque<Commands> q, BufferedReader on, String user_login) throws IOException, SQLException{
 		ExecuteScript exec = new ExecuteScript();
 		q = History.cut(q);
 		q.addLast(exec);
 
 		//execute_script C:\vpd\PudgePudgePudgePudge.txt execute_script C:\vpd\PudgePudgePudgePudge.txt
-		return ExecuteScript.execute_script(dao, q, on);
+		return ExecuteScript.execute_script(dao, q, on, user_login);
 	}
 	@Override
-	public stringQueue requestExecute(DAO<Worker> dao, ArrayDeque<Commands> q, Request request) throws IOException{
+	public stringQueue requestExecute(DAO<Worker> dao, ArrayDeque<Commands> q, Request request) throws IOException, SQLException {
 		ExecuteScript exec = new ExecuteScript();
 		q = History.cut(q);
 		q.addLast(exec);

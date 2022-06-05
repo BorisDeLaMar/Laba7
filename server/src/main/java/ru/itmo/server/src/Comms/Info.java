@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.BufferedReader;
 import java.nio.file.*;
 import java.nio.file.attribute.*;
+import java.sql.SQLException;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayDeque;
 import java.time.LocalDateTime;
@@ -42,7 +43,7 @@ public class Info implements Commands{
 		return "info";
 	}
 	@Override
-	public stringQueue executeCommand(DAO<Worker> dao, ArrayDeque<Commands> q, BufferedReader on){
+	public stringQueue executeCommand(DAO<Worker> dao, ArrayDeque<Commands> q, BufferedReader on, String user_login) throws SQLException {
 		Info inf = new Info();
 		q = History.cut(q);
 		q.addLast(inf);

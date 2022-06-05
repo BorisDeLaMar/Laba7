@@ -1,5 +1,6 @@
 package ru.itmo.client;
 
+import ru.itmo.common.authorization.User;
 import ru.itmo.common.connection.*;
 
 import java.io.IOException;
@@ -12,9 +13,10 @@ import java.util.ArrayList;
 
 public class ServerAPIImpl implements ServerAPI{
     @Override
-    public Response add(ArrayList<String> args) {
+    public Response add(ArrayList<String> args, User user) {
         Request request = new Request(
                 "add",
+                user.getLogin(),
                 args
         );
 
@@ -28,9 +30,10 @@ public class ServerAPIImpl implements ServerAPI{
         }
     }
     @Override
-    public Response add_if_min(ArrayList<String> args) {
+    public Response add_if_min(ArrayList<String> args, User user) {
         Request request = new Request(
                 "add_if_min",
+                user.getLogin(),
                 args
         );
 
@@ -44,9 +47,10 @@ public class ServerAPIImpl implements ServerAPI{
         }
     }
     @Override
-    public Response info(){
+    public Response info(User user){
         Request request = new Request(
                 "info",
+                user.getLogin(),
                 null
         );
 
@@ -58,9 +62,10 @@ public class ServerAPIImpl implements ServerAPI{
         }
     }
     @Override
-    public Response show(){
+    public Response show(User user){
         Request request = new Request(
                 "show",
+                user.getLogin(),
                 null
         );
 
@@ -72,9 +77,10 @@ public class ServerAPIImpl implements ServerAPI{
         }
     }
     @Override
-    public Response clear(){
+    public Response clear(User user){
         Request request = new Request(
                 "clear",
+                user.getLogin(),
                 null
         );
 
@@ -86,9 +92,10 @@ public class ServerAPIImpl implements ServerAPI{
         }
     }
     @Override
-    public Response exit(){
+    public Response exit(User user){
         Request request = new Request(
                 "exit",
+                user.getLogin(),
                 null
         );
 
@@ -100,9 +107,10 @@ public class ServerAPIImpl implements ServerAPI{
         }
     }
     @Override
-    public Response history(){
+    public Response history(User user){
         Request request = new Request(
                 "history",
+                user.getLogin(),
                 null
         );
 
@@ -114,10 +122,11 @@ public class ServerAPIImpl implements ServerAPI{
         }
     }
     @Override
-    public Response execute_script(String filename){
+    public Response execute_script(String filename, User user){
 
         Request request = new Request(
                 "execute_script",
+                user.getLogin(),
                 filename
         );
 
@@ -129,10 +138,11 @@ public class ServerAPIImpl implements ServerAPI{
         }
     }
     @Override
-    public Response filter_less_than_status(String state){
+    public Response filter_less_than_status(String state, User user){
 
         Request request = new Request(
                 "filter_less_than_status",
+                user.getLogin(),
                 state
         );
 
@@ -144,10 +154,11 @@ public class ServerAPIImpl implements ServerAPI{
         }
     }
     @Override
-    public Response help(){
+    public Response help(User user){
 
         Request request = new Request(
                 "help",
+                user.getLogin(),
                 null
         );
 
@@ -159,10 +170,11 @@ public class ServerAPIImpl implements ServerAPI{
         }
     }
     @Override
-    public Response print_descending(){
+    public Response print_descending(User user){
 
         Request request = new Request(
                 "print_descending",
+                user.getLogin(),
                 null
         );
 
@@ -174,10 +186,11 @@ public class ServerAPIImpl implements ServerAPI{
         }
     }
     @Override
-    public Response print_unique_status(){
+    public Response print_unique_status(User user){
 
         Request request = new Request(
                 "print_unique_status",
+                user.getLogin(),
                 null
         );
 
@@ -189,10 +202,11 @@ public class ServerAPIImpl implements ServerAPI{
         }
     }
     @Override
-    public Response remove(long id){
+    public Response remove(long id, User user){
 
         Request request = new Request(
                 "remove_by_id",
+                user.getLogin(),
                 id
         );
 
@@ -204,10 +218,11 @@ public class ServerAPIImpl implements ServerAPI{
         }
     }
     @Override
-    public Response remove_lower(long id){
+    public Response remove_lower(long id, User user){
 
         Request request = new Request(
                 "remove_lower",
+                user.getLogin(),
                 id
         );
 
@@ -219,10 +234,11 @@ public class ServerAPIImpl implements ServerAPI{
         }
     }
     @Override
-    public Response update(ArrayList<String> args){
+    public Response update(ArrayList<String> args, User user){
 
         Request request = new Request(
                 "update",
+                user.getLogin(),
                 args
         );
 
@@ -234,7 +250,7 @@ public class ServerAPIImpl implements ServerAPI{
         }
     }
 
-    private Response sendToServer(Request request) throws IOException {
+    public Response sendToServer(Request request) throws IOException {
         SocketChannel client = null;
         SocketAddress address = new InetSocketAddress("localhost", 65100);
         try {

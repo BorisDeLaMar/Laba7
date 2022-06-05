@@ -1,8 +1,11 @@
 package ru.itmo.server.src.Comms;
 
+import java.sql.SQLException;
 import java.util.ArrayDeque;
 import com.google.gson.reflect.TypeToken;
+import ru.itmo.common.DatabaseAccess;
 import ru.itmo.common.connection.Request;
+import ru.itmo.server.src.Comms.database.DB_Worker;
 import ru.itmo.server.src.Exceptions.LimitException;
 import ru.itmo.server.src.Exceptions.NullException;
 import ru.itmo.server.src.GivenClasses.*;
@@ -16,7 +19,7 @@ public class Update implements Commands{
 	 *Updates element by id and given args
 	 *@author BARIS 
 	*/
-	public String just_update(ArrayList<String> args, DAO<Worker> dao){
+	public String just_update(ArrayList<String> args, DAO<Worker> dao, String user_login) throws SQLException{
 		long id = -1;
 		try {
 			id = Long.parseLong(args.get(8));
@@ -27,6 +30,9 @@ public class Update implements Commands{
 		Worker w = dao.get(id);
 		if(w == null){
 			return "There's no worker with such id";
+		}
+		else if(!w.getUser_login().equals(user_login)){
+			return "You're not allowed to update info about " + w.getUser_login() + "'s worker";
 		}
 		try {
 			try {
@@ -65,6 +71,7 @@ public class Update implements Commands{
 				double y = Double.parseDouble(args.get(7));
 				Coordinates cords = new Coordinates(x, y);
 				w.setCoordinates(cords);
+				DB_Worker.updateWorker(w, DatabaseAccess.getDBConnection());
 			} catch (IllegalArgumentException e) {
 				return "'x' should be type long, 'y' should be type double for coordinates field in function " + getName();
 			} catch (LimitException e) {
@@ -75,9 +82,9 @@ public class Update implements Commands{
 			return "There's lack of arguments for function " + getName();
 		}
 
-		return "Worker " + w.getName() + " was successfully added with all fields";
+		return "Worker " + w.getName() + " was successfully updated with all fields";
 	}
-	public String update_by_id(DAO<Worker> dao, BufferedReader on) throws IOException{
+	public String update_by_id(DAO<Worker> dao, BufferedReader on, String user_login) throws IOException, SQLException{
 		Add dd = new Add();
 		String reply = "";
 		try {
@@ -86,8 +93,12 @@ public class Update implements Commands{
 			if(w == null) {
 				reply += "\nThere's no guy with such id\n";
 			}
+			else if(!w.getUser_login().equals(user_login)){
+				reply += "\nYou're not allowed to update info about " + w.getUser_login() + "'s worker\n";
+			}
 			else {
 				reply += dd.add_read_exec(w, on, reply).getMessage();
+				DB_Worker.updateWorker(w, DatabaseAccess.getDBConnection());
 				reply += "\nWorker with id " + w.getId() + " was successfully updated\n";
 			}
 		}
@@ -106,22 +117,22 @@ public class Update implements Commands{
 		return "update";
 	}
 	@Override
-	public stringQueue executeCommand(DAO<Worker> dao, ArrayDeque<Commands> q, BufferedReader on) throws IOException{
+	public stringQueue executeCommand(DAO<Worker> dao, ArrayDeque<Commands> q, BufferedReader on, String user_login) throws IOException, SQLException {
 		Update upd = new Update();
 		q = History.cut(q);
 		q.addLast(upd);
 
-		String reply = upd.update_by_id(dao, on);
+		String reply = upd.update_by_id(dao, on, user_login);
 		return new stringQueue(reply, q);
 	}
 	@Override
-	public stringQueue requestExecute(DAO<Worker> dao, ArrayDeque<Commands> q, Request request) throws IOException{
+	public stringQueue requestExecute(DAO<Worker> dao, ArrayDeque<Commands> q, Request request) throws IOException, SQLException{
 		Update upd = new Update();
 		q = History.cut(q);
 		q.addLast(upd);
 
 		TypeToken<ArrayList<String>> typeToken = new TypeToken<ArrayList<String>>(){};
-		String reply = upd.just_update((ArrayList<String>) request.getArgumentAs(typeToken), dao);
+		String reply = upd.just_update((ArrayList<String>) request.getArgumentAs(typeToken), dao, request.getUser_login());
 
 		return new stringQueue(reply, q);
 	}

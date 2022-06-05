@@ -13,7 +13,6 @@ import java.time.LocalDateTime;
 
 public class Worker extends AbstractWorker implements Comparable<Worker>, Serializable {
     public static ArrayList<Long> bannedID = new ArrayList<Long>();
-    // TODO
     private boolean IdNotFromFile = true;
     public boolean getFlag() {
     	return IdNotFromFile;
@@ -21,13 +20,12 @@ public class Worker extends AbstractWorker implements Comparable<Worker>, Serial
     public void setFlag() {
     	IdNotFromFile = true;
     }
-    
     private int x;
     private int y;
     private int moneymoney;
+	private String user_login;
     
-    public Worker(String name, long salary, Position pos, Status state, Organization org, Coordinates cords, String id, String creationDate, DAO<Worker> dao) {
-    	try {
+    public Worker(String name, long salary, Position pos, Status state, Organization org, Coordinates cords, String id, String creationDate, DAO<Worker> dao) throws NullException, LimitException{
     		setName(name);
     		setSalary(salary);
     		setPosition(pos);
@@ -35,134 +33,22 @@ public class Worker extends AbstractWorker implements Comparable<Worker>, Serial
     		setOrganization(org);
     		setCoordinates(cords);
     		setCreationDate(creationDate);
-    		setId(id, dao);
+    		setId(id);
     	   	moneymoney = (int) salary/10000;
     		x = (int) coordinates.getAbscissa();
     		y = (int) coordinates.getOrdinate();
-    	}
-    	catch(NullException e) {
-    		DataDAO.setFlag(false);
-    		System.out.println(e.getMessage());
-    	}
-    	catch(LimitException e) {
-    		DataDAO.setFlag(false);
-    		System.out.println(e.getMessage());
-    	}
     }
     public Worker() {}
 	
     public long getId() {
     	return id;
     }
-    public void setId(String id, DAO<Worker> dao) throws NullException, LimitException{
-    	if(id == "") {
-    		this.id = Worker.findPossibleID();
-			if(this.id == -1) {
-				throw new LimitException("Our dear " + name + " was deleted from collection, cause there couldn't be more than 1000 people in bd");      
-			}
-    		bannedID.add(this.id);
-    	}
-    	else {
-    		try {
-    			long possible_ID = Long.valueOf(id);
-    			IdNotFromFile = false;
-    	    	//System.out.println(bannedID.size());
-        		for(int c = 0; c < bannedID.size(); c++) {
-        			//System.out.println(possible_ID + " " + bannedID.get(c));
-        			if(possible_ID <= 0) {
-        				this.id = Worker.findPossibleID();
-        				if(this.id == -1) {
-        					throw new LimitException("Our dear " + name + " was deleted from collection, cause there couldn't be more than 1000 people in bd");      
-        				}
-        				bannedID.add(this.id);
-        				throw new LimitException("Id can't be below 1, so we changed it to appropriate one (" + this.id + ") for " + name);
-        			}
-        			if(possible_ID == bannedID.get(c)) {
-        				if(false == dao.get(bannedID.get(c)).getFlag()) {
-        					//System.out.println(bannedID.get(c));
-        					//Worker w = dao.get(possible_ID);
-        					long idik = Worker.findPossibleID();
-        					if(idik == -1) {
-        						throw new LimitException("Our dear " + name + " was deleted from collection, cause there couldn't be more than 1000 people in bd");      
-        					}
-        					this.id = possible_ID;
-        					String s = "There were two guys with same id:\n" + name + ", " + creationDate + "\n" + dao.get(bannedID.get(c)).getName() + ", " + dao.get(bannedID.get(c)).getCreationDate() + "\nSo I changed the id of second guy to " + idik;   					
-        					dao.get(bannedID.get(c)).setID(idik);
-        					bannedID.add(idik);  
-        					throw new LimitException(s);
-        				}
-        				else if (possible_ID < DataDAO.getIDCounter()) {
-        					Worker w = dao.get(possible_ID);
-        					long idik = Worker.findPossibleID();
-        					if(idik == -1) {
-        						throw new LimitException("Our dear " + name + " was deleted from collection, cause there couldn't be more than 1000 people in bd");      
-        					}
-        					this.id = possible_ID;
-        					w.setID(idik);
-        					bannedID.add(idik);
-        				}
-        				else {
-	        				this.id = Worker.findPossibleID();
-	        				if(this.id == -1) {
-	        					throw new LimitException("Our dear " + name + " was deleted from collection, cause there couldn't be more than 1000 people in bd");      
-	        				}
-	        				bannedID.add(this.id);
-        				}
-        				break;
-        			}
-        			else if(c == bannedID.size() - 1) {
-        				this.id = possible_ID;
-        				bannedID.add(this.id);
-        				break;
-        			}
-        		}
-    		}
-    		catch(IllegalArgumentException e) {
-				this.id = Worker.findPossibleID();
-				if(this.id == -1) {
-					throw new LimitException("Our dear " + name + " was deleted from collection, cause there couldn't be more than 1000 people in bd");      
-				}
-				bannedID.add(this.id);
-				throw new LimitException("Id should be type long, so we'll fix it\n" + "Id of " + name + " was set to appropriate one: " + this.id);
-    		}
-    	}
-    }
-	public void setTemporaryID(long id){
+	public void setId(String id) throws NumberFormatException{
+		this.id = Long.parseLong(id);
+	}
+	public void setId(long id){
 		this.id = id;
 	}
-    public void setID(long id) throws LimitException{
-    	for(int c = 0; c < bannedID.size(); c++) {
-    		if(id == bannedID.get(c)) {
-    			this.id = Worker.findPossibleID();
-				if(this.id == -1) {
-					throw new LimitException("Our dear " + name + " was deleted from collection, cause there couldn't be more than 1000 people in bd");      
-				}
-    			bannedID.add(this.id);
-    			//DataDAO.incrementID();
-    			break;
-    		}
-    		else if(c == bannedID.size() - 1){
-    			this.id = id;
-    			bannedID.add(this.id);
-    			//DataDAO.incrementID();
-    			break;
-    		}
-    	}
-    }
-    public static long findPossibleID() {
-    	for(long i = DataDAO.getIDCounter(); i < 1001; i++) {
-    		for(int c = 0; c < bannedID.size(); c++) {
-    			if(i == bannedID.get(c)) {
-    				break;
-    			}
-    			if(c == bannedID.size() - 1){
-    				long id = i;
-    				return id;
-    			}
-    		}
-    	}
-    	return -1;
-    }
     public String getName() {
     	return name;
     }
@@ -247,8 +133,16 @@ public class Worker extends AbstractWorker implements Comparable<Worker>, Serial
     		this.status = status;
     	}
     }
-    
-    public Organization getOrganization() {
+
+	public String getUser_login() {
+		return user_login;
+	}
+
+	public void setUser_login(String user_login) {
+		this.user_login = user_login;
+	}
+
+	public Organization getOrganization() {
     	return organization;
     }
     public void setOrganization(Organization organization) {
@@ -276,7 +170,7 @@ public class Worker extends AbstractWorker implements Comparable<Worker>, Serial
     @Override
     public String toString() {
     	DateTimeFormatter format = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-    	return "Name: " + name + "\nSalary: " + salary + "\nPosition: " + position.toString() + "\nStatus: " + status.toString() + "\nOrganization: " + organization.getName() + ", " + organization.getType().toString() + "\nCoordinates: " + coordinates.getAbscissa() + ", " + coordinates.getOrdinate() + "\n" + "ID: " + id + ",\n" + "creationDate: " + creationDate.format(format) + "\n";
+    	return "Name: " + name + "\nSalary: " + salary + "\nPosition: " + position.toString() + "\nStatus: " + status.toString() + "\nOrganization: " + organization.getName() + ", " + organization.getType().toString() + "\nCoordinates: " + coordinates.getAbscissa() + ", " + coordinates.getOrdinate() + "\n" + "ID: " + id + ",\n" + "creationDate: " + creationDate.format(format) + "\n" + "user_login:" + user_login + "\n";
     }
     @Override
     public int compareTo(Worker w) {

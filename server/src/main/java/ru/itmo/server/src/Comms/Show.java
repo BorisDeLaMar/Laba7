@@ -1,6 +1,7 @@
 package ru.itmo.server.src.Comms;
 
 import java.io.IOException;
+import java.sql.SQLException;
 import java.util.ArrayDeque;
 import java.io.BufferedReader;
 import java.util.LinkedHashSet;
@@ -35,7 +36,7 @@ public class Show implements Commands{
 		return "prints all the elements of collection";
 	}
 	@Override
-	public stringQueue executeCommand(DAO<Worker> dao, ArrayDeque<Commands> q, BufferedReader on){
+	public stringQueue executeCommand(DAO<Worker> dao, ArrayDeque<Commands> q, BufferedReader on, String user_login) throws SQLException {
 		Show show = new Show();
 		q = History.cut(q);
 		q.addLast(show);

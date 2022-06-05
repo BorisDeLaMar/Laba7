@@ -1,12 +1,16 @@
 package ru.itmo.server.src.Comms;
 
 import com.google.gson.JsonSyntaxException;
+
+import java.sql.SQLException;
 import java.util.ArrayDeque;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.util.ArrayList;
 import com.google.gson.reflect.TypeToken;
+import ru.itmo.common.DatabaseAccess;
 import ru.itmo.common.connection.Request;
+import ru.itmo.server.src.Comms.database.DB_Worker;
 import ru.itmo.server.src.Exceptions.LimitException;
 import ru.itmo.server.src.Exceptions.NullException;
 import ru.itmo.server.src.GivenClasses.*;
@@ -14,7 +18,7 @@ import ru.itmo.server.src.containers.booleanString;
 import ru.itmo.server.src.containers.stringQueue;
 
 public class Add implements Commands{
-	public String justAdd(DAO<Worker> dao, ArrayList<String> args){
+	public String justAdd(DAO<Worker> dao, ArrayList<String> args, String user_login) throws SQLException {
 		Worker w = new Worker();
 		try {
 			try {
@@ -63,18 +67,13 @@ public class Add implements Commands{
 			return "There's lack of arguments for function " + getName();
 		}
 		w.setCreationDate();
-		try {
-			w.setID(Worker.findPossibleID());
-			dao.appendToList(w);
-		}
-		catch(LimitException e) {
-			System.out.println(e.getMessage());
-		}
+		long id = DB_Worker.addWorker(w, user_login, DatabaseAccess.getDBConnection());
+		w.setId(id);
+		w.setUser_login(user_login);
+		dao.appendToList(w);
 		return "Worker " + w.getName() + " successfully added";
-		//System.out.println(args);
-		//dao.appendToList(w);
 	}
-	public String add_exec(DAO<Worker> dao, BufferedReader on) {
+	public String add_exec(DAO<Worker> dao, BufferedReader on, String user_login) throws SQLException{
 		String reply = "";
 		Worker w = new Worker();
 		boolean flag = true;
@@ -92,13 +91,10 @@ public class Add implements Commands{
 		else {
 			w.setCreationDate();
 			reply += "\nWorker from file was successfully added\n";
-			try {
-				w.setID(Worker.findPossibleID());
-				dao.appendToList(w);
-			}
-			catch(LimitException e) {
-				reply += "\n" + e.getMessage() + "\n";
-			}
+			long id = DB_Worker.addWorker(w, user_login, DatabaseAccess.getDBConnection());
+			w.setId(id);
+			w.setUser_login(user_login);
+			dao.appendToList(w);
 		}
 		return reply;
 	}
@@ -239,26 +235,29 @@ public class Add implements Commands{
 	}
 	//@SuppressWarnings("finally")
 	@Override
-	public stringQueue executeCommand(DAO<Worker> dao, ArrayDeque<Commands> q, BufferedReader on) throws IOException{
+	public stringQueue executeCommand(DAO<Worker> dao, ArrayDeque<Commands> q, BufferedReader on, String user_login) throws IOException, SQLException{
 		q = History.cut(q);
 		q.addLast(this);
 
-		return new stringQueue(this.add_exec(dao, on), q);
+		return new stringQueue(this.add_exec(dao, on, user_login), q);
 	}
 	@Override
-	public stringQueue requestExecute(DAO<Worker> dao, ArrayDeque<Commands> q, Request request) throws IOException{
+	public stringQueue requestExecute(DAO<Worker> dao, ArrayDeque<Commands> q, Request request) throws IOException, SQLException{
 		q = History.cut(q);
 		q.addLast(this);
 
 		String reply = "";
 		try {
 			TypeToken<ArrayList<String>> typeToken = new TypeToken<ArrayList<String>>(){};
-			reply += this.justAdd(dao, (ArrayList<String>) request.getArgumentAs(typeToken));
+			reply += this.justAdd(dao, (ArrayList<String>) request.getArgumentAs(typeToken), request.getUser_login());
 		}
 		catch(JsonSyntaxException e){
 			reply += "Not valid arguments for function 'add'";
 		}
 
 		return new stringQueue(reply, q);
+	}
+	public static void Test(){
+
 	}
 }

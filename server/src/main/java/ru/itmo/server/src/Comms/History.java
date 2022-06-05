@@ -1,6 +1,7 @@
 package ru.itmo.server.src.Comms;
 
 import java.io.IOException;
+import java.sql.SQLException;
 import java.util.ArrayDeque;
 import java.io.BufferedReader;
 import ru.itmo.common.connection.Request;
@@ -8,16 +9,15 @@ import ru.itmo.server.src.GivenClasses.Worker;
 import ru.itmo.server.src.containers.stringQueue;
 
 public class History implements Commands{
-	/** 
-	 *Prints last seven commands
-	*/
-	private ArrayDeque<Commands> q;
 	public String history(ArrayDeque<Commands> q) {
-		this.q = new ArrayDeque<Commands>(q);
+		/**
+		 *Prints last seven commands
+		 */
+		ArrayDeque<Commands> q1 = new ArrayDeque<Commands>(q);
 		StringBuilder list = new StringBuilder();
-		while(this.q.peek() != null) {
+		while(q1.peek() != null) {
 			//System.out.println(this.q.pop().getName());
-			Commands cmd = this.q.pop();
+			Commands cmd = q1.pop();
 			list.append(cmd.getName()).append("\n");
 		}
 
@@ -39,7 +39,7 @@ public class History implements Commands{
 		return "history";
 	}
 	@Override
-	public stringQueue executeCommand(DAO<Worker> dao, ArrayDeque<Commands> q, BufferedReader on){
+	public stringQueue executeCommand(DAO<Worker> dao, ArrayDeque<Commands> q, BufferedReader on, String user_login) throws SQLException {
 		History history = new History();
 
 		String reply = history.history(q);

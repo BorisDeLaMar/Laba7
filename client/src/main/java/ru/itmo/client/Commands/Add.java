@@ -3,6 +3,7 @@ package ru.itmo.client.Commands;
 import ru.itmo.client.Command;
 import ru.itmo.client.ServerAPI;
 import ru.itmo.client.ServerAPIImpl;
+import ru.itmo.common.authorization.User;
 import ru.itmo.common.connection.Response;
 
 import java.io.BufferedReader;
@@ -15,7 +16,7 @@ public class Add implements Command {
 
     public ArrayList<String> add(BufferedReader on) throws IOException {
         System.out.println("Enter name: ");
-        String name = on.readLine().split(" ")[0];
+        String name = on.readLine();
         System.out.println("Enter salary: ");
         String salo = on.readLine().split(" ")[0];
         System.out.println("Enter position: ");
@@ -41,9 +42,9 @@ public class Add implements Command {
     }
 
     @Override
-    public String executeCommand(BufferedReader bf) throws IOException, NullPointerException{
+    public String executeCommand(BufferedReader bf, User user) throws IOException, NullPointerException{
         ServerAPI serverAPI = new ServerAPIImpl();
-        Response response = serverAPI.add(add(bf));
+        Response response = serverAPI.add(add(bf), user);
         if(response == null){
             return "So that worker wasn't added";
         }

@@ -3,6 +3,7 @@ package ru.itmo.client.Commands;
 import ru.itmo.client.Command;
 import ru.itmo.client.ServerAPI;
 import ru.itmo.client.ServerAPIImpl;
+import ru.itmo.common.authorization.User;
 import ru.itmo.common.connection.Response;
 
 import java.io.BufferedReader;
@@ -18,9 +19,9 @@ public class Exit implements Command {
     }
 
     @Override
-    public String executeCommand(BufferedReader bf) throws IOException{
+    public String executeCommand(BufferedReader bf, User user) throws IOException{
         ServerAPI serverAPI = new ServerAPIImpl();
-        Response response = serverAPI.exit();
+        Response response = serverAPI.exit(user);
         Exit.setExit(false);
         if(response == null){
             return "Exit command returned null";

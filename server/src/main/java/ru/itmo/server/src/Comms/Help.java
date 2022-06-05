@@ -1,6 +1,7 @@
 package ru.itmo.server.src.Comms;
 
 import java.io.IOException;
+import java.sql.SQLException;
 import java.util.ArrayDeque;
 import java.io.BufferedReader;
 import java.util.ArrayList;
@@ -32,7 +33,7 @@ public class Help extends AbstractHelp implements Commands{
 		return "help";
 	}
 	@Override
-	public stringQueue executeCommand(DAO<Worker> dao, ArrayDeque<Commands> q, BufferedReader on){
+	public stringQueue executeCommand(DAO<Worker> dao, ArrayDeque<Commands> q, BufferedReader on, String user_login) throws SQLException {
 		Help hlp = new Help();
 		q = History.cut(q);
 		q.addLast(hlp);

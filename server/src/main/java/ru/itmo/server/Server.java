@@ -1,7 +1,11 @@
 package ru.itmo.server;
 
 //import javafx.concurrent.Worker;
+import ru.itmo.common.DatabaseAccess;
+import ru.itmo.common.authorization.User;
 import ru.itmo.server.src.Comms.*;
+import ru.itmo.server.src.Comms.database.DB_User;
+import ru.itmo.server.src.Comms.database.DB_Worker;
 import ru.itmo.server.src.GivenClasses.Worker;
 import ru.itmo.common.connection.*;
 import java.net.*;
@@ -10,6 +14,10 @@ import java.nio.channels.ServerSocketChannel;
 import java.io.*;
 import java.nio.channels.SocketChannel;
 import java.nio.charset.StandardCharsets;
+import java.security.NoSuchAlgorithmException;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.concurrent.ExecutorService;
@@ -21,20 +29,26 @@ public class Server {
     private final static DAO<Worker> dao = new DataDAO();
     private static ArrayDeque<Commands> q = new ArrayDeque<Commands>();
     private static final ArrayList<Commands> cmd = Help.getLst();
-    public static void main(String[] args){
-
+    public static void main(String[] args) {
+        try {
+            DB_User db_user = new DB_User();
+            DB_Worker dbWorker = new DB_Worker();
+        }
+        catch(SQLException e){
+            System.out.println(e.getMessage() + " \nP.S. Someone defecated into console, sorry((((");
+        }
         procedure();
 
         try {
             while(Exit.getExit()) {
                 connection();
             }
-        } catch (InterruptedException e) {
+        } catch (InterruptedException | SQLException e) {
             System.out.println(e.getMessage());
         }
     }
 
-    public static void connection() throws InterruptedException{
+    public static void connection() throws InterruptedException, SQLException{
         InputStreamReader in = new InputStreamReader(System.in);
 
         try(ServerSocketChannel serv = ServerSocketChannel.open()){
@@ -66,12 +80,6 @@ public class Server {
                     );
                     send(errResponse, server);
                 }
-                /*try {
-                    server.close();
-                    serv.close();
-                } catch (IOException e) {
-                    System.out.println(e.getMessage());
-                }*/
             });
         }
         catch(IOException e) {
@@ -86,10 +94,13 @@ public class Server {
         Worker.bannedID.add(0, c);
 
         String filepath = System.getenv("FPATH");
-        dao.DateRead(filepath);
-        DataDAO.setFlag(true);
+        try {
+            dao.DateRead(DatabaseAccess.getDBConnection());
+        } catch(SQLException e){
+            System.out.println(e.getMessage() + " line 180 Server");
+        }
     }
-    private static requestResponse reading(SocketChannel server, Response response) throws IOException{
+    private static synchronized requestResponse reading(SocketChannel server, Response response) throws IOException{
         byte[] buffer = new byte[8192];
 
         int amount = server.read(ByteBuffer.wrap(buffer));
@@ -105,34 +116,63 @@ public class Server {
 
         return new requestResponse(Request.fromJson(json), response);
     }
-    private static void commandExecuting(String message, Request request, SocketChannel server){
+    private static synchronized void commandExecuting(String message, Request request, SocketChannel server){
         Runnable task = () -> {
 
             String command = request.commandName;
             String answer = "";
             int flag = 0;
+            Response.cmdStatus respStatus = Response.cmdStatus.OK;
 
-            for (Commands cm : cmd) {
-                if (cm.getName().equals(command)) {
-                    flag += 1;
-                    try {
-                        stringQueue stringQueue = cm.requestExecute(dao, q, request);
-                        q = stringQueue.getQueue();
-                        answer = stringQueue.getString();
-                    } catch (IOException e) {
-                        System.out.println(e.getMessage());
+            if(command.equals("addUser")) {
+                try {
+                    User user = request.getArgumentAs(User.class);
+                    Connection connection = DatabaseAccess.getDBConnection();
+                    if (!DB_User.isInBD(request.getUser_login(), connection)) {
+                        DB_User.addUser(user, DatabaseAccess.getDBConnection());
+                        answer = "User was successfully authorized";
+                    } else {
+                        if(user.getPassword().equals(DB_User.getUserPassword(user.getLogin(), connection))){
+                            answer = "User was successfully authorized";
+                        }
+                        else{
+                            answer = "You entered incorrect password!! bruh";
+                            respStatus = Response.cmdStatus.ERROR;
+                        }
                     }
+                } catch (SQLException e) {
+                    respStatus = Response.cmdStatus.ERROR;
+                    answer = e.getMessage() + "هيكات تشثونيوس ، أرتميس تشثونيوس ، هيرميس خثونيوس ، وجهوا كراهيتكم إلى Phanagora و Demetrius ، وفي الحانة الخاصة بهم ، وعلى أموالهم وممتلكاتهم. سأربط عدوي ديمتريوس وفاناغورا بالدم والتراب بكل الموتى. لن يتم إطلاق سراحك بحلول الدورة القادمة التي مدتها أربع سنوات. سأقيدك بمثل هذه التعويذة ، ديميتريوس ، قدر الإمكان ، وسأرمي أذن كلب على لسانك. ";
                 }
             }
-            if (flag == 0) {
-                answer = "Unknown command. Type help for the list of commands";
+            else {
+                for (Commands cm : cmd) {
+                    if (cm.getName().equals(command)) {
+                        flag += 1;
+                        try {
+                            stringQueue stringQueue = cm.requestExecute(dao, q, request);
+                            q = stringQueue.getQueue();
+                            answer = stringQueue.getString();
+                        } catch (IOException | SQLException e) {
+                            System.out.println(e.getMessage());
+                        }
+                    }
+                }
+                if (flag == 0) {
+                    respStatus = Response.cmdStatus.ERROR;
+                    answer = "Unknown command. Type help for the list of commands";
+                }
             }
-            send(message + "\n" + answer, server);
+            Response response = new Response(
+                    respStatus,
+                    message + "\n" + answer
+            );
+            send(response, server);
         };
         Thread thread = new Thread(task);
         thread.start();
     }
-    private static void send(Response response, SocketChannel server){
+    private static synchronized void send(Response response, SocketChannel server){
         ExecutorService executorService = Executors.newFixedThreadPool(5);
         executorService.execute(() -> {
             try {
@@ -144,7 +184,7 @@ public class Server {
             }
         });
     }
-    private static void send(String message, SocketChannel server){
+    private static synchronized void send(String message, SocketChannel server){
         ExecutorService executorService = Executors.newFixedThreadPool(5);
         executorService.execute(() -> {
             Response response = new Response(

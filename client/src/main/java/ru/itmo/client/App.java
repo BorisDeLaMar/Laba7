@@ -1,14 +1,18 @@
 package ru.itmo.client;
 
 import ru.itmo.client.Commands.*;
+import ru.itmo.common.authorization.User;
+import ru.itmo.common.connection.Request;
+import ru.itmo.common.connection.Response;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 
 public class App {
     public static void main(String[] args) {
-        ServerAPI serverAPI = new ServerAPIImpl();
         ArrayList<Command> cmd = fillLst();
 
         try {
@@ -22,11 +26,9 @@ public class App {
         InputStreamReader in = new InputStreamReader(System.in);
         BufferedReader bf = new BufferedReader(in);
 
-        while(Exit.getExit()) {
+        User user = authorization(bf);
 
-            //GistStaff.setFlag(false);
-            //GistStaff.setReply("");
-            //ru.itmo.common.LAB5.src.Comms.ExecuteScript.file_bdCleaner();
+        while(Exit.getExit()) {
 
             String[] line = bf.readLine().split(" ");
             String command = line[0];
@@ -36,7 +38,7 @@ public class App {
                 if (cm.getName().equals(command)) {
                     flag += 1;
                     try {
-                        System.out.println(cm.executeCommand(bf));
+                        System.out.println(cm.executeCommand(bf, user));
                     } catch (IOException | NullPointerException e) {
                         System.out.println(e.getMessage());
                     }
@@ -50,6 +52,32 @@ public class App {
         bf.close();
     }
 
+    private static User authorization(BufferedReader bf) throws IOException{
+        ServerAPIImpl serverAPI = new ServerAPIImpl();
+
+        System.out.print("Enter login: ");
+        String login = bf.readLine();
+        System.out.print("Enter password: ");
+        String password = bf.readLine();
+        User user = null;
+        try {
+            user = new User(login, password);
+            Response response = serverAPI.sendToServer(new Request(
+                    "addUser",
+                    user.getLogin(),
+                    user
+            ));
+            System.out.println(response.getArgumentAs(String.class));
+            if(response.status.equals(Response.cmdStatus.ERROR)){
+                authorization(bf);
+            }
+            //insert user in table and send user request
+        } catch(NoSuchAlgorithmException e){
+            System.out.println("There's no such algorithm for encrypting your password. Talk to server creator");
+            System.exit(228);
+        }
+        return user;
+    }
     private static ArrayList<Command> fillLst(){
         ArrayList<Command> cmd = new ArrayList<Command>();
 

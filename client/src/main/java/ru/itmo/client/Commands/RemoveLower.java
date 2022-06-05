@@ -3,6 +3,7 @@ package ru.itmo.client.Commands;
 import ru.itmo.client.Command;
 import ru.itmo.client.ServerAPI;
 import ru.itmo.client.ServerAPIImpl;
+import ru.itmo.common.authorization.User;
 import ru.itmo.common.connection.Response;
 
 import java.io.BufferedReader;
@@ -11,7 +12,7 @@ import java.io.IOException;
 public class RemoveLower implements Command {
 
     @Override
-    public String executeCommand(BufferedReader bf) throws IOException{
+    public String executeCommand(BufferedReader bf, User user) throws IOException{
         ServerAPI serverAPI = new ServerAPIImpl();
         long id;
         while(true) {
@@ -24,7 +25,7 @@ public class RemoveLower implements Command {
                 System.out.println("Id should be type long");
             }
         }
-        Response response = serverAPI.remove_lower(id);
+        Response response = serverAPI.remove_lower(id, user);
 
         if(response == null){
             return "Remove_lower command returned null";

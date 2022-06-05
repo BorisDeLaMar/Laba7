@@ -1,4 +1,6 @@
 package ru.itmo.server.src.Comms;
+import java.sql.Connection;
+import java.sql.SQLException;
 import java.util.Set;
 
 /** 
@@ -10,7 +12,7 @@ public interface DAO<T> {
 	void delete(T t);
 	T get(long id);
 	Set<T> getAll();
-	void DateRead(String filename);
+	void DateRead(Connection connection) throws SQLException;
 	
 	
 	void saveCollection(String s);

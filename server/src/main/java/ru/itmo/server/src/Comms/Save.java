@@ -4,6 +4,7 @@ import ru.itmo.common.connection.Request;
 import ru.itmo.server.src.GivenClasses.Worker;
 import ru.itmo.server.src.containers.stringQueue;
 import java.io.BufferedReader;
+import java.sql.SQLException;
 import java.util.ArrayDeque;
 import java.util.LinkedHashSet;
 import java.io.BufferedWriter;
@@ -73,7 +74,7 @@ public class Save implements Commands{
 		return "save";
 	}
 	@Override
-	public stringQueue executeCommand(DAO<Worker> dao, ArrayDeque<Commands> q, BufferedReader on){
+	public stringQueue executeCommand(DAO<Worker> dao, ArrayDeque<Commands> q, BufferedReader on, String user_login) throws SQLException {
 		Save save = new Save();
 		q = History.cut(q);
 		q.addLast(save);

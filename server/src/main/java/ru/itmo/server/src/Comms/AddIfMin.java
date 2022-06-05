@@ -4,8 +4,10 @@ import com.google.gson.JsonSyntaxException;
 import java.io.*;
 
 import com.google.gson.reflect.TypeToken;
+import ru.itmo.common.DatabaseAccess;
 import ru.itmo.common.connection.Request;
 import ru.itmo.common.connection.Response;
+import ru.itmo.server.src.Comms.database.DB_Worker;
 import ru.itmo.server.src.Exceptions.LimitException;
 import ru.itmo.server.src.Exceptions.NullException;
 import ru.itmo.server.src.GivenClasses.*;
@@ -14,6 +16,7 @@ import ru.itmo.server.src.containers.stringQueue;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 import java.nio.charset.StandardCharsets;
+import java.sql.SQLException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
@@ -23,7 +26,7 @@ public class AddIfMin implements Commands{
 	 *Adds element if it's minimum of all the elements
 	 *@author BARIS  
 	*/
-	public String just_add_if_min(DAO<Worker> dao, ArrayList<String> args){
+	public String just_add_if_min(DAO<Worker> dao, ArrayList<String> args, String user_login) throws SQLException {
 
 		Worker w = new Worker();
 		try {
@@ -73,29 +76,25 @@ public class AddIfMin implements Commands{
 			return "There's lack of arguments for function " + getName();
 		}
 		w.setCreationDate();
-		try {
-			w.setID(Worker.findPossibleID());
-			LinkedHashSet<Worker> bd = new LinkedHashSet<Worker>(dao.getAll());
-			boolean flag = true;
-			for(Worker e : bd) {
-				if(e.hashCode() <= w.hashCode()) {
-					flag = false;
-					System.out.println(e.hashCode());
-				}
-			}
-			if(flag) {
-				dao.appendToList(w);
-				return "Worker successfully added";
-			}
-			else{
-				return "Worker is not min, so that he was not added";
+		LinkedHashSet<Worker> bd = new LinkedHashSet<Worker>(dao.getAll());
+		boolean flag = true;
+		for (Worker e : bd) {
+			if (e.hashCode() <= w.hashCode()) {
+				flag = false;
+				System.out.println(e.hashCode());
 			}
 		}
-		catch(LimitException e) {
-			return e.getMessage();
+		if (flag) {
+			long id = DB_Worker.addWorker(w, user_login, DatabaseAccess.getDBConnection());
+			w.setId(id);
+			w.setUser_login(user_login);
+			dao.appendToList(w);
+			return "Worker successfully added";
+		} else {
+			return "Worker is not min, so that he was not added";
 		}
 	}
-	public String add_if_min_exec(DAO<Worker> dao, BufferedReader on) throws LimitException, IOException{
+	public String add_if_min_exec(DAO<Worker> dao, BufferedReader on, String user_login) throws LimitException, IOException, SQLException{
 		Worker w = new Worker();
 		Add dd = new Add();
 
@@ -111,7 +110,9 @@ public class AddIfMin implements Commands{
 		if(f) {
 			w.setCreationDate();
 			reply += "\nWorker from file was successfully added\n";
-			w.setID(Worker.findPossibleID());
+			long id = DB_Worker.addWorker(w, user_login, DatabaseAccess.getDBConnection());
+			w.setId(id);
+			w.setUser_login(user_login);
 			dao.appendToList(w);
 		}
 		else{
@@ -128,14 +129,14 @@ public class AddIfMin implements Commands{
 		return "add_if_min";
 	}
 	@Override
-	public stringQueue executeCommand(DAO<Worker> dao, ArrayDeque<Commands> q, BufferedReader on) throws IOException{
+	public stringQueue executeCommand(DAO<Worker> dao, ArrayDeque<Commands> q, BufferedReader on, String user_login) throws IOException, SQLException{
 		AddIfMin aim = new AddIfMin();
 		q = History.cut(q);
 		q.addLast(aim);
 
 		String reply = "";
 		try {
-			reply = aim.add_if_min_exec(dao, on);
+			reply = aim.add_if_min_exec(dao, on, user_login);
 		}
 		catch(LimitException e) {
 			System.out.println(e.getMessage());
@@ -143,14 +144,14 @@ public class AddIfMin implements Commands{
 		return new stringQueue(reply, q); //Проверить history. Если не робит, попробуй в try возвращать q, а здесь null
 	}
 	@Override
-	public stringQueue requestExecute(DAO<Worker> dao, ArrayDeque<Commands> q, Request request) throws IOException {
+	public stringQueue requestExecute(DAO<Worker> dao, ArrayDeque<Commands> q, Request request) throws IOException, SQLException {
 		q = History.cut(q);
 		q.addLast(this);
 
 		String reply = "";
 		try{
 			TypeToken<ArrayList<String>> typeToken = new TypeToken<ArrayList<String>>(){};
-			reply += this.just_add_if_min(dao, (ArrayList<String>) request.getArgumentAs(typeToken));
+			reply += this.just_add_if_min(dao, (ArrayList<String>) request.getArgumentAs(typeToken), request.getUser_login());
 		}
 		catch(JsonSyntaxException e){
 			reply += "Not valid arguments for function 'add'";

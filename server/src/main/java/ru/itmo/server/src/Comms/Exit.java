@@ -1,6 +1,7 @@
 package ru.itmo.server.src.Comms;
 
 import java.io.IOException;
+import java.sql.SQLException;
 import java.util.ArrayDeque;
 import ru.itmo.common.connection.Request;
 import ru.itmo.server.src.GivenClasses.Worker;
@@ -34,7 +35,7 @@ public class Exit implements Commands{
 		return "exit";
 	}
 	@Override
-	public stringQueue executeCommand(DAO<Worker> dao, ArrayDeque<Commands> q, BufferedReader on){
+	public stringQueue executeCommand(DAO<Worker> dao, ArrayDeque<Commands> q, BufferedReader on, String user_login) throws SQLException {
 		Exit exe = new Exit();
 		q = History.cut(q);
 		q.addLast(exe);

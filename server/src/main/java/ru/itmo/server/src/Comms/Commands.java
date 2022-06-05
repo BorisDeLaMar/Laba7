@@ -1,6 +1,7 @@
 package ru.itmo.server.src.Comms;
 
 import java.nio.channels.SocketChannel;
+import java.sql.SQLException;
 import java.util.ArrayDeque;
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -16,8 +17,8 @@ public interface Commands {
 	*/
 	String getName();
 	String getGist();
-	stringQueue executeCommand(DAO<Worker> dao, ArrayDeque<Commands> q, BufferedReader on) throws IOException;
-	stringQueue requestExecute(DAO<Worker> dao, ArrayDeque<Commands> q, Request request) throws IOException;
+	stringQueue executeCommand(DAO<Worker> dao, ArrayDeque<Commands> q, BufferedReader on, String user_login) throws IOException, SQLException;
+	stringQueue requestExecute(DAO<Worker> dao, ArrayDeque<Commands> q, Request request) throws IOException, SQLException;
 	//ArrayDeque<Commands> executeCommand(DAO<Worker> dao, ArrayDeque<Commands> q, Scanner scn);
 	//ArrayDeque<Commands> executeCommand(DAO<Worker> dao, ArrayDeque<Commands> q);
 }

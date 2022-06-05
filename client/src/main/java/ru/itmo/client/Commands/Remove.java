@@ -3,6 +3,7 @@ package ru.itmo.client.Commands;
 import ru.itmo.client.Command;
 import ru.itmo.client.ServerAPI;
 import ru.itmo.client.ServerAPIImpl;
+import ru.itmo.common.authorization.User;
 import ru.itmo.common.connection.Response;
 
 import java.io.BufferedReader;
@@ -25,10 +26,10 @@ public class Remove implements Command {
     }
 
     @Override
-    public String executeCommand(BufferedReader bf) throws IOException{
+    public String executeCommand(BufferedReader bf, User user) throws IOException{
         ServerAPI serverAPI = new ServerAPIImpl();
         long id = remove(bf);
-        Response response = serverAPI.remove(id);
+        Response response = serverAPI.remove(id, user);
 
         if(response == null){
             return "Remove command returned null";

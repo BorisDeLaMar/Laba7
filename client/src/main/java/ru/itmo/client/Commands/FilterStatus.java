@@ -3,6 +3,7 @@ package ru.itmo.client.Commands;
 import ru.itmo.client.Command;
 import ru.itmo.client.ServerAPI;
 import ru.itmo.client.ServerAPIImpl;
+import ru.itmo.common.authorization.User;
 import ru.itmo.common.connection.Response;
 
 import java.io.BufferedReader;
@@ -15,9 +16,9 @@ public class FilterStatus implements Command {
     }
 
     @Override
-    public String executeCommand(BufferedReader bf) throws IOException{
+    public String executeCommand(BufferedReader bf, User user) throws IOException{
         ServerAPI serverAPI = new ServerAPIImpl();
-        Response response = serverAPI.filter_less_than_status(filter_less_than_status(bf));
+        Response response = serverAPI.filter_less_than_status(filter_less_than_status(bf), user);
 
         if(response == null){
             return "Filter_less_than_status command returned null";

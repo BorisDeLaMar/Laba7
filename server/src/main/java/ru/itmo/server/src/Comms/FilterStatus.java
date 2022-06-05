@@ -5,6 +5,7 @@ import ru.itmo.server.src.GivenClasses.Status;
 import ru.itmo.server.src.GivenClasses.Worker;
 import ru.itmo.server.src.containers.stringQueue;
 import java.io.*;
+import java.sql.SQLException;
 import java.util.ArrayDeque;
 import java.util.LinkedHashSet;
 import java.util.stream.Collectors;
@@ -18,15 +19,10 @@ public class FilterStatus implements Commands{
 
 		Sort srt = new Sort();
 		LinkedHashSet<Worker> bd = new LinkedHashSet<Worker>(srt.sort(dao));
-		bd  = new LinkedHashSet<Worker>(bd.stream().filter(s -> state.isBetter(s.getStatus())).collect(Collectors.toSet()));
 		StringBuilder list = new StringBuilder();
 		for(Worker w : bd) {
 			String person = "";
-			person = w.toString();
-			list.append(person);
-		}
-		for(Worker w : bd) {
-			String person = "";
+			//System.out.println(state + " 25 line filter less than status");
 			if(state.isBetter(w.getStatus())) {
 				person = w.toString();
 			}
@@ -43,14 +39,16 @@ public class FilterStatus implements Commands{
 		}
 		catch(IllegalArgumentException e) {
 			reply += "\nAvailable status values:" + Status.strConvert() + "\n";
+			return reply;
 		}
 		catch(NullPointerException e) {
 			reply += "\nNo status to read from file for filter_less_than_status\n";
+			return reply;
 		}
 		Sort srt = new Sort();
 		LinkedHashSet<Worker> bd = new LinkedHashSet<Worker>(srt.sort(dao));
 		StringBuilder list = new StringBuilder();
-		if(!(state == null)) {
+		if(state != null) {
 			for (Worker w : bd) {
 				String person = "";
 				if (state.isBetter(w.getStatus())) {
@@ -71,7 +69,7 @@ public class FilterStatus implements Commands{
 		return "filter_less_than_status";
 	}
 	@Override
-	public stringQueue executeCommand(DAO<Worker> dao, ArrayDeque<Commands> q, BufferedReader on) throws IOException{
+	public stringQueue executeCommand(DAO<Worker> dao, ArrayDeque<Commands> q, BufferedReader on, String user_login) throws IOException, SQLException {
 		FilterStatus st = new FilterStatus();
 		q = History.cut(q);
 		q.addLast(st);
@@ -85,7 +83,14 @@ public class FilterStatus implements Commands{
 		q = History.cut(q);
 		q.addLast(st);
 
-		String reply = st.just_filter_less_than_status(dao, request.getArgumentAs(Status.class));
+		String reply = "";
+		try {
+			Status state = Status.valueOf(request.getArgumentAs(String.class));
+			reply = st.just_filter_less_than_status(dao, state);
+
+		} catch(IllegalArgumentException e) {
+			reply = e.getMessage();
+		}
 		return new stringQueue(reply, q);
 	}
 }

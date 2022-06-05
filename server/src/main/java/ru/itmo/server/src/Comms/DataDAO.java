@@ -3,8 +3,14 @@ package ru.itmo.server.src.Comms;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.LinkedHashSet;
 import org.json.*;
+import ru.itmo.server.src.Exceptions.LimitException;
+import ru.itmo.server.src.Exceptions.NullException;
 import ru.itmo.server.src.GivenClasses.*;
 
 public class DataDAO implements DAO<Worker>{
@@ -13,31 +19,10 @@ public class DataDAO implements DAO<Worker>{
 	 */
 	
 	private final LinkedHashSet<Worker> database = new LinkedHashSet<Worker>();
-	private String filepath;
-	private static boolean flag;
-	public static boolean getFlag() {
-		return flag;
-	}
-	public static void setFlag(boolean f) {
-		flag = f;
-	}
-	
-	private static long id_count = 1;
-	public static long getIDCounter() {
-		return id_count;
-	}
-	public static void incrementID() {
-		id_count += 1;
-	}
-	//private static long available_id;
-	
-	public DataDAO() {
-		
-	}
-	
+	public DataDAO() {}
 	/**Чтение из файла*/
 	@Override
-	public void DateRead(String filename) {
+	public synchronized void  DateRead(Connection connection) throws SQLException {
 		String hname;
 		long hsalary;
 		Position hpos; //h - heroe's
@@ -50,47 +35,40 @@ public class DataDAO implements DAO<Worker>{
 		 *@author BARIS  
 		 *@throws IllegalArgumentException, JSONException, IOException
 		*/
-		filepath = filename;
-		try(BufferedReader in = new BufferedReader(new FileReader(filepath))){
-			try {
-				JSONTokener tokener = new JSONTokener(in);
-				JSONObject obj =  new JSONObject(tokener);
-				JSONArray arr = obj.getJSONArray("workers");
-				for(int i = 0; i < arr.length(); i++) {
-					flag = true;
-					JSONObject o = arr.getJSONObject(i);
-					hname = o.getString("name");
-					hsalary = o.getLong("salary");
-					//есть o.getEnum но я не пон как аргументы в него вставить правильно
-					if(o.getString("position") == "null") {
-						hpos = null;
-					}
-					else {
-						hpos = Position.valueOf(o.getString("position"));
-					}
-					hstatus = Status.valueOf(o.getString("status"));
-					String str_id = o.getString("ID");
-					String creationDate = o.getString("CreationDate");
-					JSONArray org = o.getJSONArray("organization");
-					horganization = new Organization(org);
-					JSONArray cord = o.getJSONArray("coordinates");
-					hcoordinates = new Coordinates(cord);
+		try {
+			String sql = "SELECT * from worker";
+			PreparedStatement preparedStatement = connection.prepareStatement(sql);
+			ResultSet resultSet = preparedStatement.executeQuery();
+			while(resultSet.next()) {
+				String str_id = resultSet.getString(1);
+				hname = resultSet.getString(2);
+				hsalary = resultSet.getLong(3);
+				//есть o.getEnum но я не пон как аргументы в него вставить правильно
+				if (resultSet.getString(4).equals("")) {
+					hpos = null;
+				} else {
+					hpos = Position.valueOf(resultSet.getString(4));
+				}
+				hstatus = Status.valueOf(resultSet.getString(5));
+				String creationDate = resultSet.getString(10);
+				horganization = new Organization(resultSet.getString(6), OrganizationType.valueOf(resultSet.getString(7)));
+				hcoordinates = new Coordinates(resultSet.getLong(8), resultSet.getDouble(9));
+				try {
 					Worker worker = new Worker(hname, hsalary, hpos, hstatus, horganization, hcoordinates, str_id, creationDate, this);
-					if(worker.getId() == -1) {
+					worker.setUser_login(resultSet.getString(11));
+					//System.out.println(worker.toString() + " datatdao 56 line");
+					if (worker.getId() == -1) {
 						this.delete(worker);
-					}
-					else {
+					} else {
 						this.appendToList(worker);//dao запускает функцию
 					}
-					//id += 1;
+				}
+				catch(NullException | LimitException e){
+					System.out.println(e.getMessage());
 				}
 			}
-			catch(IllegalArgumentException | JSONException e) {
-				flag = false;
-				System.out.println(e.getMessage());
-			}
 		}
-		catch(IOException e){
+		catch(IllegalArgumentException | JSONException e) {
 			System.out.println(e.getMessage());
 		}
 	}
@@ -102,13 +80,7 @@ public class DataDAO implements DAO<Worker>{
 	//Worker clerk = new Worker();
 	@Override
 	public void appendToList(Worker w) {
-		if(DataDAO.getFlag()) {
-			database.add(w);
-			if(w.getFlag()) {
-				DataDAO.incrementID();
-				w.setFlag();
-			}
-		}
+		database.add(w);
 		//System.out.println(id_count + " " + w.getName());
 	}
 	@Override
@@ -125,7 +97,6 @@ public class DataDAO implements DAO<Worker>{
 		}
 		return null; //и эту ошибку обханделить потом
 	}
-
 	@Override
 	public LinkedHashSet<Worker> getAll(){
 		return database;

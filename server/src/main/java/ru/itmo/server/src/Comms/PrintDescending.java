@@ -1,6 +1,7 @@
 package ru.itmo.server.src.Comms;
 
 import java.io.IOException;
+import java.sql.SQLException;
 import java.util.*;
 import java.io.BufferedReader;
 import ru.itmo.common.connection.Request;
@@ -36,7 +37,7 @@ public class PrintDescending implements Commands{
 		return "print_descending";
 	}
 	@Override
-	public stringQueue executeCommand(DAO<Worker> dao, ArrayDeque<Commands> q, BufferedReader on){
+	public stringQueue executeCommand(DAO<Worker> dao, ArrayDeque<Commands> q, BufferedReader on, String user_login) throws SQLException {
 		PrintDescending prnt = new PrintDescending();
 		q = History.cut(q);
 		q.addLast(prnt);
