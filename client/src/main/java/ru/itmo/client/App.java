@@ -59,24 +59,29 @@ public class App {
         String login = bf.readLine();
         System.out.print("Enter password: ");
         String password = bf.readLine();
-        User user = null;
-        try {
-            user = new User(login, password);
-            Response response = serverAPI.sendToServer(new Request(
-                    "addUser",
-                    user.getLogin(),
-                    user
-            ));
-            System.out.println(response.getArgumentAs(String.class));
-            if(response.status.equals(Response.cmdStatus.ERROR)){
-                authorization(bf);
-            }
-            //insert user in table and send user request
-        } catch(NoSuchAlgorithmException e){
-            System.out.println("There's no such algorithm for encrypting your password. Talk to server creator");
+        String[] arr = null;
+        arr = new String[2];
+        arr[0] = login; arr[1] = password;
+        Response response = serverAPI.sendToServer(new Request(
+                "addUser",
+                login,
+                arr
+        ));
+        System.out.println(response.getArgumentAs(String.class));
+        if(response.status.equals(Response.cmdStatus.ERROR)){
+            authorization(bf);
+        }
+        Response response1 = serverAPI.sendToServer(new Request(
+                "getUser",
+                login,
+                null
+        ));
+        if(response1.status.equals(Response.cmdStatus.ERROR)){
+            System.out.println(response1.getArgumentAs(String.class));
+            System.out.println("Due to this problem client stopped working");
             System.exit(228);
         }
-        return user;
+        return response1.getArgumentAs(User.class);
     }
     private static ArrayList<Command> fillLst(){
         ArrayList<Command> cmd = new ArrayList<Command>();

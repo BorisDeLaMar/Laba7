@@ -12,14 +12,6 @@ import java.util.ArrayList;
 import java.time.LocalDateTime;
 
 public class Worker extends AbstractWorker implements Comparable<Worker>, Serializable {
-    public static ArrayList<Long> bannedID = new ArrayList<Long>();
-    private boolean IdNotFromFile = true;
-    public boolean getFlag() {
-    	return IdNotFromFile;
-    }
-    public void setFlag() {
-    	IdNotFromFile = true;
-    }
     private int x;
     private int y;
     private int moneymoney;
@@ -148,11 +140,7 @@ public class Worker extends AbstractWorker implements Comparable<Worker>, Serial
     public void setOrganization(Organization organization) {
     	this.organization = organization;
     }
-    
-    public static void removeFromBanned(Long id) {
-    	//System.out.println(bannedID.toString());
-    	bannedID.remove(id);
-    }
+
     @Override
     public int hashCode() {
     	return 31*name.length() + 29*x*x + 31*y*y + moneymoney/1000;

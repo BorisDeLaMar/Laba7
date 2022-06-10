@@ -21,7 +21,7 @@ public class Show implements Commands{
 		StringBuilder list = new StringBuilder();
 		String person;
 		for(Worker w : bd) {
-			person = w.toString();
+			person = w.toString() + "<============================>\n";
 			list.append(person);
 		}
 		return list.toString();

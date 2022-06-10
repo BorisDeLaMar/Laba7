@@ -16,8 +16,8 @@ public class DB_Worker {
                 "status TEXT NOT NULL," +
                 "orgName TEXT," +
                 "orgType TEXT," +
-                "xCord INTEGER," +
-                "yCord FLOAT," +
+                "xCord INTEGER CHECK(xCord < 176)," +
+                "yCord FLOAT CHECK(yCord < 729)," +
                 "creationDate TEXT," +
                 "user_login TEXT NOT NULL REFERENCES USERS(user_login)" +
                 ");";

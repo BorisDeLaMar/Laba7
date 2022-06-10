@@ -9,6 +9,8 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.LinkedHashSet;
 import org.json.*;
+import ru.itmo.common.DatabaseAccess;
+import ru.itmo.server.src.Comms.database.DB_Worker;
 import ru.itmo.server.src.Exceptions.LimitException;
 import ru.itmo.server.src.Exceptions.NullException;
 import ru.itmo.server.src.GivenClasses.*;
@@ -22,13 +24,15 @@ public class DataDAO implements DAO<Worker>{
 	public DataDAO() {}
 	/**Чтение из файла*/
 	@Override
-	public synchronized void  DateRead(Connection connection) throws SQLException {
+	public synchronized void DateRead(Connection connection) throws SQLException{
 		String hname;
 		long hsalary;
 		Position hpos; //h - heroe's
 		Status hstatus;
 		Organization horganization;
 		Coordinates hcoordinates;
+		long id = -1;
+		String str_id = "-1";
 		/** 
 		 *Add function
 		 *@param String filename
@@ -40,7 +44,7 @@ public class DataDAO implements DAO<Worker>{
 			PreparedStatement preparedStatement = connection.prepareStatement(sql);
 			ResultSet resultSet = preparedStatement.executeQuery();
 			while(resultSet.next()) {
-				String str_id = resultSet.getString(1);
+				str_id = resultSet.getString(1);
 				hname = resultSet.getString(2);
 				hsalary = resultSet.getLong(3);
 				//есть o.getEnum но я не пон как аргументы в него вставить правильно
@@ -62,13 +66,14 @@ public class DataDAO implements DAO<Worker>{
 					} else {
 						this.appendToList(worker);//dao запускает функцию
 					}
-				}
-				catch(NullException | LimitException e){
+				} catch (NullException | LimitException e) {
 					System.out.println(e.getMessage());
 				}
 			}
 		}
-		catch(IllegalArgumentException | JSONException e) {
+		catch(IllegalArgumentException | JSONException | SQLException e) {
+			id = Long.parseLong(str_id);
+			DB_Worker.deleteWorker(id, DatabaseAccess.getDBConnection());
 			System.out.println(e.getMessage());
 		}
 	}
@@ -85,7 +90,6 @@ public class DataDAO implements DAO<Worker>{
 	}
 	@Override
 	public void delete(Worker w) {
-		Worker.removeFromBanned(w.getId());
 		database.remove(w);
 	}
 	@Override

@@ -1,6 +1,7 @@
 package ru.itmo.server;
 
 //import javafx.concurrent.Worker;
+import com.google.gson.reflect.TypeToken;
 import ru.itmo.common.DatabaseAccess;
 import ru.itmo.common.authorization.User;
 import ru.itmo.server.src.Comms.*;
@@ -16,7 +17,6 @@ import java.nio.channels.SocketChannel;
 import java.nio.charset.StandardCharsets;
 import java.security.NoSuchAlgorithmException;
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -29,6 +29,8 @@ public class Server {
     private final static DAO<Worker> dao = new DataDAO();
     private static ArrayDeque<Commands> q = new ArrayDeque<Commands>();
     private static final ArrayList<Commands> cmd = Help.getLst();
+    private static final ExecutorService exec = Executors.newCachedThreadPool();
+    private static final ExecutorService executorService = Executors.newFixedThreadPool(5);
     public static void main(String[] args) {
         try {
             DB_User db_user = new DB_User();
@@ -42,9 +44,11 @@ public class Server {
         try {
             while(Exit.getExit()) {
                 connection();
+                DatabaseAccess.getDBConnection();
             }
         } catch (InterruptedException | SQLException e) {
             System.out.println(e.getMessage());
+            System.exit(0);
         }
     }
 
@@ -57,13 +61,12 @@ public class Server {
             SocketChannel server = serv.accept();
 
             //Многопоток клиентов
-            ExecutorService exec = Executors.newCachedThreadPool();
             exec.execute(() -> {
                 requestResponse requestResponse;
                 Request request;
                 Response response = new Response(
                         Response.cmdStatus.OK,
-                        "Начинаю обработку команды"
+                        "Started working on the command"
                 );
                 try {
                     requestResponse = reading(server, response);
@@ -88,12 +91,8 @@ public class Server {
         }
     }
     private static void procedure(){
-        Worker.bannedID.clear();
         Help.fillLst();
-        Long c = (long) 0;
-        Worker.bannedID.add(0, c);
 
-        String filepath = System.getenv("FPATH");
         try {
             dao.DateRead(DatabaseAccess.getDBConnection());
         } catch(SQLException e){
@@ -120,19 +119,27 @@ public class Server {
         Runnable task = () -> {
 
             String command = request.commandName;
-            String answer = "";
+            String answer = "Base value for 'answer'";
             int flag = 0;
             Response.cmdStatus respStatus = Response.cmdStatus.OK;
+            Response response = new Response(
+                    respStatus,
+                    answer
+            );
 
             if(command.equals("addUser")) {
                 try {
-                    User user = request.getArgumentAs(User.class);
+                    TypeToken<ArrayList<String>> typeToken = new TypeToken<ArrayList<String>>(){};
+                    ArrayList<String> arr = (ArrayList<String>) request.getArgumentAs(typeToken);
                     Connection connection = DatabaseAccess.getDBConnection();
                     if (!DB_User.isInBD(request.getUser_login(), connection)) {
+                        User user = new User(arr.get(0), arr.get(1));
                         DB_User.addUser(user, DatabaseAccess.getDBConnection());
-                        answer = "User was successfully authorized";
+                        answer = "User was successfully logged in";
                     } else {
-                        if(user.getPassword().equals(DB_User.getUserPassword(user.getLogin(), connection))){
+                        String maybe_password = arr.get(1);
+                        String salt = DB_User.getUserSalt(request.getUser_login(), DatabaseAccess.getDBConnection());
+                        if(User.secure_password(maybe_password, salt).equals(DB_User.getUserPassword(request.getUser_login(), connection))){
                             answer = "User was successfully authorized";
                         }
                         else{
@@ -140,9 +147,31 @@ public class Server {
                             respStatus = Response.cmdStatus.ERROR;
                         }
                     }
-                } catch (SQLException e) {
+                } catch (SQLException | NoSuchAlgorithmException e) {
                     respStatus = Response.cmdStatus.ERROR;
                     answer = e.getMessage() + "هيكات تشثونيوس ، أرتميس تشثونيوس ، هيرميس خثونيوس ، وجهوا كراهيتكم إلى Phanagora و Demetrius ، وفي الحانة الخاصة بهم ، وعلى أموالهم وممتلكاتهم. سأربط عدوي ديمتريوس وفاناغورا بالدم والتراب بكل الموتى. لن يتم إطلاق سراحك بحلول الدورة القادمة التي مدتها أربع سنوات. سأقيدك بمثل هذه التعويذة ، ديميتريوس ، قدر الإمكان ، وسأرمي أذن كلب على لسانك. ";
+                }
+                response = new Response(
+                        respStatus,
+                        message + "\n" + answer
+                );
+            }
+            else if(command.equals("getUser")){
+                try {
+                    Response.cmdStatus respStatus1 = Response.cmdStatus.OK;
+                    User user = DB_User.getUser(request.getUser_login(), DatabaseAccess.getDBConnection());
+                    response = new Response(
+                            respStatus1,
+                            user
+                    );
+                }
+                catch(NoSuchAlgorithmException | SQLException e){
+                    Response.cmdStatus respStatus1 = Response.cmdStatus.ERROR;
+                    answer = e.getMessage();
+                    response = new Response(
+                            respStatus1,
+                            answer
+                    );
                 }
             }
             else {
@@ -154,7 +183,8 @@ public class Server {
                             q = stringQueue.getQueue();
                             answer = stringQueue.getString();
                         } catch (IOException | SQLException e) {
-                            System.out.println(e.getMessage());
+                            respStatus = Response.cmdStatus.ERROR;
+                            answer = e.getMessage() + " on line 152 Server";
                         }
                     }
                 }
@@ -162,25 +192,25 @@ public class Server {
                     respStatus = Response.cmdStatus.ERROR;
                     answer = "Unknown command. Type help for the list of commands";
                 }
+                response = new Response(
+                        respStatus,
+                        message + "\n" + answer
+                );
             }
-            Response response = new Response(
-                    respStatus,
-                    message + "\n" + answer
-            );
             send(response, server);
         };
         Thread thread = new Thread(task);
         thread.start();
     }
     private static synchronized void send(Response response, SocketChannel server){
-        ExecutorService executorService = Executors.newFixedThreadPool(5);
         executorService.execute(() -> {
             try {
                 //System.out.println(response.getArgumentAs(String.class));
                 server.write(ByteBuffer.wrap(response.toJson().getBytes(StandardCharsets.UTF_8)));
             }
             catch(IOException e){
-                System.out.println(e.getMessage() + " on line 142 in Server.java");
+                System.out.println(e.getMessage());
+                //server.write(ByteBuffer.wrap((e.getMessage() + " on line 142 in Server.java").getBytes(StandardCharsets.UTF_8)));
             }
         });
     }
